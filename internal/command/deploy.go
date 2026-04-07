@@ -127,7 +127,8 @@ func writeWorkflow(path, content, label string) error {
 	fmt.Printf("✓ %s ワークフローを生成しました: %s\n", label, path)
 	fmt.Printf("\n次のステップ:\n")
 	fmt.Printf("  git add %s\n", path)
-	fmt.Printf("  git commit -m 'ci: add %s pages deployment'\n", strings.ToLower(label[:strings.Index(label, " ")]))
+	target := strings.ToLower(strings.Fields(label)[0])
+	fmt.Printf("  git commit -m 'ci: add %s pages deployment'\n", target)
 	fmt.Printf("  git push\n")
 	return nil
 }

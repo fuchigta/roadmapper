@@ -8,10 +8,10 @@ package server
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -116,18 +116,19 @@ func (s *Server) sseHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) staticHandler(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-	if path == "/" || strings.HasSuffix(path, "/") {
-		path = path + "index.html"
+	urlPath := r.URL.Path
+	if urlPath == "/" || strings.HasSuffix(urlPath, "/") {
+		urlPath += "index.html"
 	}
-	filePath := s.distDir + path
+	filePath := filepath.Join(s.distDir, filepath.FromSlash(urlPath))
 
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		// index.html にフォールバック
-		idxPath := strings.TrimRight(filePath, "/") + "/index.html"
+		// ディレクトリ配下の index.html にフォールバック
+		idxPath := filepath.Join(filePath, "index.html")
 		if data2, err2 := os.ReadFile(idxPath); err2 == nil {
 			data = data2
+			filePath = idxPath
 		} else {
 			http.NotFound(w, r)
 			return
@@ -143,7 +144,7 @@ func (s *Server) staticHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Cache-Control", "no-store")
-	io.Copy(w, bytes.NewReader(data))
+	w.Write(data)
 }
 
 func injectLiveReload(html []byte) []byte {
@@ -164,7 +165,7 @@ func contentType(path string) string {
 		return "image/svg+xml"
 	case strings.HasSuffix(path, ".xml"):
 		return "application/xml"
-	case strings.HasSuffix(path, ".rss"), strings.HasSuffix(path, ".rss"):
+	case strings.HasSuffix(path, ".rss"):
 		return "application/rss+xml"
 	default:
 		return "application/octet-stream"

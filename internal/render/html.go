@@ -9,6 +9,7 @@ import (
 	"github.com/fuchigta/roadmapper/internal/config"
 	"github.com/fuchigta/roadmapper/internal/graph"
 	"github.com/fuchigta/roadmapper/internal/layout"
+	"github.com/fuchigta/roadmapper/internal/meta"
 )
 
 // NodeMeta はフロントエンドに渡すノードのメタデータ。
@@ -42,12 +43,7 @@ func RenderRoadmapPage(
 	svgStr := RenderSVG(g, lr, cfg.Site.BrandColor)
 
 	ogpURL := ""
-	if cfg.Site.SiteURL != "" {
-		bp := basePath
-		if !strings.HasSuffix(bp, "/") {
-			bp += "/"
-		}
-		base := strings.TrimRight(cfg.Site.SiteURL, "/") + bp
+	if base := meta.SiteBase(cfg.Site.SiteURL, basePath); base != "" {
 		ogpURL = base + rm.ID + "/index.html"
 	}
 
@@ -100,12 +96,7 @@ func RenderIndexPage(
 
 	ogpURL := ""
 	rssURL := ""
-	if cfg.Site.SiteURL != "" {
-		bp := basePath
-		if !strings.HasSuffix(bp, "/") {
-			bp += "/"
-		}
-		base := strings.TrimRight(cfg.Site.SiteURL, "/") + bp
+	if base := meta.SiteBase(cfg.Site.SiteURL, basePath); base != "" {
 		ogpURL = base
 		rssURL = base + "feed.rss"
 	}

@@ -92,7 +92,7 @@ func runBuild(configPath, outDir, basePath string) error {
 		}
 
 		// ノード本文を Markdown → HTML に変換
-		nodeHTML, hasMermaid, err := buildNodeHTML(g, rm, docs)
+		nodeHTML, hasMermaid, err := buildNodeHTML(g, docs)
 		if err != nil {
 			return err
 		}
@@ -155,11 +155,7 @@ func runBuild(configPath, outDir, basePath string) error {
 }
 
 // buildNodeHTML は各ノードの Markdown を HTML に変換して map と mermaid 有無を返す。
-func buildNodeHTML(
-	g *graph.Graph,
-	_ *config.Roadmap,
-	docs map[string]*content.Doc,
-) (map[string]string, bool, error) {
+func buildNodeHTML(g *graph.Graph, docs map[string]*content.Doc) (map[string]string, bool, error) {
 	nodeHTML := map[string]string{}
 	hasMermaid := false
 

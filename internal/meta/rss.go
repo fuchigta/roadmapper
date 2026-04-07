@@ -2,7 +2,6 @@ package meta
 
 import (
 	"encoding/xml"
-	"strings"
 	"time"
 
 	"github.com/fuchigta/roadmapper/internal/config"
@@ -33,15 +32,10 @@ type itemXML struct {
 // RenderRSS は RSS 2.0 フィードの文字列を返す。
 // siteURL が空の場合は空文字列を返す。
 func RenderRSS(cfg *config.Config, graphs map[string]*graph.Graph) (string, error) {
-	siteURL := strings.TrimRight(cfg.Site.SiteURL, "/")
-	if siteURL == "" {
+	siteLink := SiteBase(cfg.Site.SiteURL, cfg.Site.BasePath)
+	if siteLink == "" {
 		return "", nil
 	}
-	basePath := cfg.Site.BasePath
-	if !strings.HasSuffix(basePath, "/") {
-		basePath += "/"
-	}
-	siteLink := siteURL + basePath
 
 	var items []itemXML
 	for _, rm := range cfg.Roadmaps {

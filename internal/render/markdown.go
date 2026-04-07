@@ -23,30 +23,31 @@ var mermaidBlockRe = regexp.MustCompile(
 	`(?s)<pre[^>]*><code[^>]*class="[^"]*language-mermaid[^"]*"[^>]*>(.*?)</code></pre>`,
 )
 
+// md はパッケージ全体で共有する goldmark インスタンス。
+var md = goldmark.New(
+	goldmark.WithExtensions(
+		extension.GFM,
+		extension.Typographer,
+		highlighting.NewHighlighting(
+			highlighting.WithStyle("github"),
+			highlighting.WithFormatOptions(
+				html.WithClasses(false),
+				html.WithLineNumbers(false),
+			),
+			highlighting.WithGuessLanguage(false),
+		),
+	),
+	goldmark.WithParserOptions(
+		parser.WithAutoHeadingID(),
+	),
+	goldmark.WithRendererOptions(
+		goldmarkHTML.WithUnsafe(),
+	),
+)
+
 // RenderMarkdown は Markdown 文字列を HTML に変換する。
 // mermaid コードブロックは <pre class="mermaid"> でパススルーする。
 func RenderMarkdown(src string) (string, error) {
-	md := goldmark.New(
-		goldmark.WithExtensions(
-			extension.GFM,
-			extension.Typographer,
-			highlighting.NewHighlighting(
-				highlighting.WithStyle("github"),
-				highlighting.WithFormatOptions(
-					html.WithClasses(false),
-					html.WithLineNumbers(false),
-				),
-				highlighting.WithGuessLanguage(false),
-			),
-		),
-		goldmark.WithParserOptions(
-			parser.WithAutoHeadingID(),
-		),
-		goldmark.WithRendererOptions(
-			goldmarkHTML.WithUnsafe(),
-		),
-	)
-
 	var buf bytes.Buffer
 	if err := md.Convert([]byte(src), &buf); err != nil {
 		return "", err
@@ -69,12 +70,19 @@ func RenderMarkdown(src string) (string, error) {
 	return result, nil
 }
 
+var (
+	reAmp  = regexp.MustCompile(`&amp;`)
+	reLt   = regexp.MustCompile(`&lt;`)
+	reGt   = regexp.MustCompile(`&gt;`)
+	reQuot = regexp.MustCompile(`&quot;`)
+)
+
 // unescapeHTML は &amp; &lt; &gt; &quot; を戻す (mermaid ソース復元用)。
 func unescapeHTML(s string) string {
-	s = regexp.MustCompile(`&amp;`).ReplaceAllString(s, "&")
-	s = regexp.MustCompile(`&lt;`).ReplaceAllString(s, "<")
-	s = regexp.MustCompile(`&gt;`).ReplaceAllString(s, ">")
-	s = regexp.MustCompile(`&quot;`).ReplaceAllString(s, `"`)
+	s = reAmp.ReplaceAllString(s, "&")
+	s = reLt.ReplaceAllString(s, "<")
+	s = reGt.ReplaceAllString(s, ">")
+	s = reQuot.ReplaceAllString(s, `"`)
 	return s
 }
 

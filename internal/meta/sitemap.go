@@ -2,7 +2,6 @@ package meta
 
 import (
 	"encoding/xml"
-	"strings"
 
 	"github.com/fuchigta/roadmapper/internal/config"
 )
@@ -20,16 +19,10 @@ type urlXML struct {
 // RenderSitemap は sitemap.xml の文字列を返す。
 // siteURL が空の場合は空文字列を返す。
 func RenderSitemap(cfg *config.Config) (string, error) {
-	siteURL := strings.TrimRight(cfg.Site.SiteURL, "/")
-	if siteURL == "" {
+	base := SiteBase(cfg.Site.SiteURL, cfg.Site.BasePath)
+	if base == "" {
 		return "", nil
 	}
-	// basePath は "/" 始まりで "/" 終わりにする。空の場合は "/"
-	basePath := cfg.Site.BasePath
-	if !strings.HasSuffix(basePath, "/") {
-		basePath += "/"
-	}
-	base := siteURL + basePath
 
 	urls := []urlXML{
 		{Loc: base},
