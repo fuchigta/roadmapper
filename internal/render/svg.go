@@ -3,7 +3,6 @@ package render
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/fuchigta/roadmapper/internal/config"
@@ -189,10 +188,3 @@ func escapeXML(s string) string {
 	return s
 }
 
-// distance は2点間の距離 (edge 描画用)
-func distance(x1, y1, x2, y2 float64) float64 {
-	return math.Sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1))
-}
-
-// _ は distance を参照して unused エラーを防ぐ (将来 edge 長計算に使う)
-var _ = distance

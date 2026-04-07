@@ -34,7 +34,7 @@ func RenderRoadmapPage(
 	colors := DeriveColors(cfg.Site.BrandColor)
 
 	// ノードデータ JSON
-	nodeMeta := buildNodeMeta(g, rm, nodeHTML)
+	nodeMeta := buildNodeMeta(g, nodeHTML)
 	nodeDataJSON, err := json.Marshal(nodeMeta)
 	if err != nil {
 		return "", err
@@ -117,33 +117,16 @@ func RenderIndexPage(
 	return renderTemplate(webFS, "templates/index.html", tmplData)
 }
 
-func buildNodeMeta(g *graph.Graph, rm *config.Roadmap, nodeHTML map[string]string) map[string]NodeMeta {
+func buildNodeMeta(g *graph.Graph, nodeHTML map[string]string) map[string]NodeMeta {
 	meta := map[string]NodeMeta{}
 	for _, n := range g.Nodes {
-		nd := NodeMeta{
+		meta[n.ID] = NodeMeta{
 			Title: n.Title,
 			HTML:  nodeHTML[n.ID],
-			Links: getLinksByID(rm, n.ID),
+			Links: n.Node.Links,
 		}
-		meta[n.ID] = nd
 	}
 	return meta
-}
-
-func getLinksByID(rm *config.Roadmap, id string) []config.Link {
-	return findLinksInNodes(rm.Nodes, id)
-}
-
-func findLinksInNodes(nodes []*config.Node, id string) []config.Link {
-	for _, n := range nodes {
-		if n.ID == id {
-			return n.Links
-		}
-		if found := findLinksInNodes(n.Children, id); found != nil {
-			return found
-		}
-	}
-	return nil
 }
 
 func renderTemplate(webFS fs.FS, name string, data any) (string, error) {
