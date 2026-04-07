@@ -5,6 +5,20 @@
 Go 製の学習ロードマップ静的サイトジェネレータ CLI。`roadmap.yml` + `content/*.md` から
 GitHub Pages / GitLab Pages 対応の静的サイトを生成する。**外部ランタイム依存ゼロ** が最重要設計原則。
 
+## Git フック (lefthook)
+
+```bash
+# 初回セットアップ (クローン後に実行)
+lefthook install
+
+# 手動実行
+lefthook run pre-commit   # gofmt / go vet / staticcheck
+lefthook run pre-push     # go test -race ./...
+```
+
+- `pre-commit`: gofmt・go vet・staticcheck を並列実行 (staged Go ファイル対象)
+- `pre-push`: `go test -race ./...` を全パッケージに実行
+
 ## 必須コマンド
 
 ```bash

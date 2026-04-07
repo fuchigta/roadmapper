@@ -13,8 +13,8 @@ import (
 
 // Frontmatter は content/<id>.md のヘッダ部分。
 type Frontmatter struct {
-	Title string   `yaml:"title"` // 省略可 (roadmap.yml を正とする)
-	Links []Link   `yaml:"links"`
+	Title string `yaml:"title"` // 省略可 (roadmap.yml を正とする)
+	Links []Link `yaml:"links"`
 }
 
 // Link は参考資料リンク。

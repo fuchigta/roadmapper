@@ -1,0 +1,19 @@
+pre-commit:
+  parallel: true
+  commands:
+    vet:
+      name: go vet
+      glob: "**/*.go"
+      run: go vet ./...
+    staticcheck:
+      name: staticcheck
+      glob: "**/*.go"
+      run: staticcheck ./...
+  scripts:
+    "fmt.sh":
+      runner: bash
+
+pre-push:
+  scripts:
+    "test.sh":
+      runner: bash

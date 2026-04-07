@@ -10,15 +10,15 @@ type Site struct {
 	Repo        string `yaml:"repo"`
 	EditBranch  string `yaml:"editBranch"`
 	BasePath    string `yaml:"basePath"`
-	SiteURL     string `yaml:"siteUrl"`   // 公開URL (sitemap/RSS/OGP 用, 例: https://example.com)
+	SiteURL     string `yaml:"siteUrl"` // 公開URL (sitemap/RSS/OGP 用, 例: https://example.com)
 	Layout      Layout `yaml:"layout"`
 }
 
 // Layout は dagre に渡すレイアウトパラメータ。
 type Layout struct {
-	RankDir  string  `yaml:"rankDir"`  // TB / LR / BT / RL
-	NodeSep  float64 `yaml:"nodeSep"`
-	RankSep  float64 `yaml:"rankSep"`
+	RankDir string  `yaml:"rankDir"` // TB / LR / BT / RL
+	NodeSep float64 `yaml:"nodeSep"`
+	RankSep float64 `yaml:"rankSep"`
 }
 
 // NodeType はノードの重要度を表す。

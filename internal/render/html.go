@@ -14,8 +14,8 @@ import (
 
 // NodeMeta はフロントエンドに渡すノードのメタデータ。
 type NodeMeta struct {
-	Title string   `json:"title"`
-	HTML  string   `json:"html"`
+	Title string        `json:"title"`
+	HTML  string        `json:"html"`
 	Links []config.Link `json:"links,omitempty"`
 }
 
@@ -29,7 +29,7 @@ func RenderRoadmapPage(
 	nodeHTML map[string]string, // nodeID → rendered HTML
 	basePath string,
 	assetBase string, // CSS/JS への相対パス (basePath 空なら "../")
-	hasMermaid bool,  // mermaid コードブロックがあれば mermaid.js を読み込む
+	hasMermaid bool, // mermaid コードブロックがあれば mermaid.js を読み込む
 ) (string, error) {
 	colors := DeriveColors(cfg.Site.BrandColor)
 

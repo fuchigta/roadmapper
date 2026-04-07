@@ -7,9 +7,9 @@ import (
 )
 
 type urlsetXML struct {
-	XMLName xml.Name  `xml:"urlset"`
-	Xmlns   string    `xml:"xmlns,attr"`
-	URLs    []urlXML  `xml:"url"`
+	XMLName xml.Name `xml:"urlset"`
+	Xmlns   string   `xml:"xmlns,attr"`
+	URLs    []urlXML `xml:"url"`
 }
 
 type urlXML struct {

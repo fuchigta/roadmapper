@@ -9,9 +9,9 @@ import (
 )
 
 type rssXML struct {
-	XMLName xml.Name    `xml:"rss"`
-	Version string      `xml:"version,attr"`
-	Channel channelXML  `xml:"channel"`
+	XMLName xml.Name   `xml:"rss"`
+	Version string     `xml:"version,attr"`
+	Channel channelXML `xml:"channel"`
 }
 
 type channelXML struct {
