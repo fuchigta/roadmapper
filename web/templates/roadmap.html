@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{.Roadmap.Title}} — {{.Site.Title}}</title>
+  <meta name="description" content="{{.Roadmap.Description}}">
+  {{if .Site.Repo}}
+  <link rel="canonical" href="{{.Site.Repo}}">
+  {{end}}
+  <!-- OGP -->
+  <meta property="og:title" content="{{.Roadmap.Title}} — {{.Site.Title}}">
+  <meta property="og:description" content="{{.Roadmap.Description}}">
+  <meta property="og:type" content="website">
+  {{if .OGPUrl}}<meta property="og:url" content="{{.OGPUrl}}">{{end}}
+  <link rel="stylesheet" href="{{.AssetBase}}style.css">
+  <style>
+    :root {
+      --brand: {{.BrandColor}};
+      --brand-light: {{.BrandColorLight}};
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a href="{{.BasePath}}index.html" class="site-title">{{.Site.Title}}</a>
+    <button id="theme-toggle" aria-label="テーマ切替" title="ライト/ダーク">🌙</button>
+  </header>
+
+  <main class="roadmap-page">
+    <div class="roadmap-header">
+      <h1>{{.Roadmap.Title}}</h1>
+      {{if .Roadmap.Description}}<p class="roadmap-desc">{{.Roadmap.Description}}</p>{{end}}
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+        <span class="progress-label" id="progress-label">0%</span>
+      </div>
+      <div class="toolbar">
+        <button id="export-btn" title="進捗をエクスポート">エクスポート</button>
+        <button id="import-btn" title="進捗をインポート">インポート</button>
+        <input type="file" id="import-file" accept=".json" style="display:none">
+      </div>
+    </div>
+
+    <div class="diagram-wrap">
+      {{.SVG}}
+    </div>
+  </main>
+
+  <!-- サイドパネル -->
+  <aside id="side-panel" class="side-panel" aria-hidden="true">
+    <div class="panel-inner">
+      <div class="panel-header">
+        <h2 id="panel-title"></h2>
+        <div class="panel-actions">
+          <select id="node-state" aria-label="進捗状態">
+            <option value="none">未着手</option>
+            <option value="in-progress">学習中</option>
+            <option value="done">完了</option>
+            <option value="skipped">スキップ</option>
+          </select>
+          <button id="panel-close" aria-label="閉じる">✕</button>
+        </div>
+      </div>
+      <div id="panel-content" class="panel-content"></div>
+      {{if .Site.Repo}}
+      <a id="edit-link" class="edit-link" target="_blank" rel="noopener">この記事を編集</a>
+      {{end}}
+    </div>
+  </aside>
+  <div id="overlay" class="overlay"></div>
+
+  <script>
+    window.ROADMAP_DATA = {{.NodeDataJSON}};
+    window.SITE_CONFIG = {
+      basePath: {{.BasePathJSON}},
+      repo: {{.RepoJSON}},
+      editBranch: {{.EditBranchJSON}},
+      roadmapId: {{.RoadmapIdJSON}}
+    };
+  </script>
+  <script src="{{.AssetBase}}app.js"></script>
+  {{if .HasMermaid}}
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'default' });
+    document.addEventListener('roadmapper:panelopen', () => mermaid.run({ querySelector: '.panel-content .mermaid' }));
+  </script>
+  {{end}}
+</body>
+</html>

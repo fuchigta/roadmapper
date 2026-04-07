@@ -1,0 +1,363 @@
+/* ===== CSS Variables ===== */
+:root {
+  --brand: #4f46e5;
+  --brand-light: #ede9fe;
+  --bg: #ffffff;
+  --bg-secondary: #f8fafc;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --shadow: 0 1px 3px rgba(0,0,0,.1);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.1);
+  --panel-width: 420px;
+  --header-h: 56px;
+  --radius: 8px;
+  --transition: 200ms ease;
+}
+
+[data-theme="dark"] {
+  --bg: #0f172a;
+  --bg-secondary: #1e293b;
+  --border: #334155;
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --shadow: 0 1px 3px rgba(0,0,0,.4);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.4);
+}
+
+/* ===== Reset ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+a { color: var(--brand); }
+
+/* ===== Header ===== */
+.site-header {
+  position: sticky;
+  top: 0;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+  box-shadow: var(--shadow);
+}
+.site-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text);
+  text-decoration: none;
+}
+#theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+/* ===== Index page ===== */
+.index-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+.index-page h1 {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+.site-desc {
+  color: var(--text-muted);
+  margin-bottom: 32px;
+}
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.roadmap-card {
+  display: block;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text);
+  transition: box-shadow var(--transition), border-color var(--transition);
+}
+.roadmap-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--brand);
+}
+.roadmap-card h2 {
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+.roadmap-card p {
+  font-size: .875rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.site-footer {
+  margin-top: 48px;
+  color: var(--text-muted);
+  font-size: .875rem;
+}
+
+/* ===== Roadmap page ===== */
+.roadmap-page {
+  padding: 24px 20px;
+}
+.roadmap-header {
+  max-width: 800px;
+  margin: 0 auto 24px;
+}
+.roadmap-header h1 {
+  font-size: 1.75rem;
+  margin-bottom: 6px;
+}
+.roadmap-desc {
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+/* ===== Progress bar ===== */
+.progress-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.progress-bar-wrap > .progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--progress, 0%);
+  background: var(--brand);
+  border-radius: 4px;
+  transition: width 400ms ease;
+}
+.progress-label { font-size: .8rem; color: var(--text-muted); white-space: nowrap; }
+
+/* card progress */
+.card-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-progress .progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ===== Toolbar ===== */
+.toolbar {
+  display: flex;
+  gap: 8px;
+}
+.toolbar button {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: .85rem;
+  color: var(--text);
+  transition: background var(--transition);
+}
+.toolbar button:hover { background: var(--brand-light); border-color: var(--brand); }
+
+/* ===== SVG Diagram ===== */
+.diagram-wrap {
+  overflow: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+.roadmap-svg { display: block; }
+
+/* ノード hover */
+.roadmap-node rect { transition: filter .15s, opacity .2s; }
+.roadmap-node:hover rect { filter: brightness(1.1) drop-shadow(0 0 6px color-mix(in srgb, var(--brand) 40%, transparent)); }
+
+/* ノード状態による色付け (JS から data-state 属性を付ける) */
+.roadmap-node[data-state="done"] rect {
+  fill: #166534 !important;
+  stroke: #166534 !important;
+}
+.roadmap-node[data-state="done"] text:not(.node-badge) { fill: #dcfce7 !important; }
+.roadmap-node[data-state="in-progress"] rect {
+  stroke: var(--brand) !important;
+  stroke-width: 2.5px !important;
+}
+.roadmap-node[data-state="skipped"] { opacity: .35; }
+
+/* 進捗インジケーター (JS で .node-indicator を <g> 内に追加) */
+.node-indicator { pointer-events: none; }
+.node-indicator circle { transition: opacity .2s; }
+
+/* ===== Side Panel ===== */
+.side-panel {
+  position: fixed;
+  top: var(--header-h);
+  right: 0;
+  width: var(--panel-width);
+  height: calc(100vh - var(--header-h));
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  z-index: 200;
+  transform: translateX(100%);
+  transition: transform var(--transition);
+  overflow-y: auto;
+}
+.side-panel.open {
+  transform: translateX(0);
+}
+.panel-inner {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.panel-header h2 { font-size: 1.1rem; }
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+#node-state {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-size: .8rem;
+  cursor: pointer;
+}
+#panel-close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px 6px;
+}
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Markdown content inside panel */
+.panel-content h2 { font-size: 1rem; margin: 16px 0 6px; }
+.panel-content h3 { font-size: .9rem; margin: 12px 0 4px; }
+.panel-content p { margin-bottom: 10px; font-size: .9rem; }
+.panel-content ul, .panel-content ol { padding-left: 20px; margin-bottom: 10px; }
+.panel-content li { font-size: .9rem; margin-bottom: 4px; }
+.panel-content pre {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  overflow-x: auto;
+  font-size: .8rem;
+  margin-bottom: 10px;
+}
+.panel-content code {
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+}
+.panel-content p code {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: .85em;
+}
+.panel-content a { word-break: break-all; }
+.panel-content blockquote {
+  border-left: 3px solid var(--brand);
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* チェックリスト */
+.panel-content input[type="checkbox"] {
+  margin-right: 6px;
+  accent-color: var(--brand);
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+
+/* リンク集 */
+.node-links { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.node-links h3 { font-size: .85rem; color: var(--text-muted); margin-bottom: 8px; }
+.node-links ul { list-style: none; padding: 0; }
+.node-links li { margin-bottom: 6px; }
+.node-links a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .875rem;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: background var(--transition);
+}
+.node-links a:hover { background: var(--brand-light); border-color: var(--brand); }
+.node-links a::before { content: "🔗"; font-size: .8rem; }
+
+.edit-link {
+  display: block;
+  margin-top: 16px;
+  font-size: .8rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* ===== Overlay ===== */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.3);
+  z-index: 150;
+}
+.overlay.show { display: block; }
+
+/* ===== Responsive ===== */
+@media (max-width: 600px) {
+  .side-panel { width: 100%; }
+}

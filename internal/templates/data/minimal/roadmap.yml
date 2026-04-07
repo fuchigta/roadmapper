@@ -1,0 +1,29 @@
+site:
+  title: My Roadmap
+  description: 学習ロードマップのサンプルです
+  brandColor: "#4f46e5"
+  author: your-name
+  license: CC-BY-4.0
+  repo: https://github.com/your-name/your-repo
+  editBranch: main
+  basePath: ""
+
+roadmaps:
+  - id: getting-started
+    title: Getting Started
+    description: 最初の一歩として学ぶべきことをまとめました
+    nodes:
+      - id: basics
+        title: 基礎を学ぶ
+        type: required
+        children:
+          - id: step1
+            title: ステップ1
+            type: required
+          - id: step2
+            title: ステップ2
+            type: optional
+      - id: intermediate
+        title: 応用
+        type: required
+        parents: [basics]

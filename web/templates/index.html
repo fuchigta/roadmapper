@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{.Site.Title}}</title>
+  <meta name="description" content="{{.Site.Description}}">
+  <!-- OGP -->
+  <meta property="og:title" content="{{.Site.Title}}">
+  <meta property="og:description" content="{{.Site.Description}}">
+  <meta property="og:type" content="website">
+  {{if .OGPUrl}}<meta property="og:url" content="{{.OGPUrl}}">{{end}}
+  {{if .RSSUrl}}<link rel="alternate" type="application/rss+xml" title="{{.Site.Title}}" href="{{.RSSUrl}}">{{end}}
+  <link rel="stylesheet" href="{{.BasePath}}style.css">
+  <style>
+    :root {
+      --brand: {{.BrandColor}};
+      --brand-light: {{.BrandColorLight}};
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <span class="site-title">{{.Site.Title}}</span>
+    <button id="theme-toggle" aria-label="テーマ切替" title="ライト/ダーク">🌙</button>
+  </header>
+
+  <main class="index-page">
+    <h1>{{.Site.Title}}</h1>
+    {{if .Site.Description}}<p class="site-desc">{{.Site.Description}}</p>{{end}}
+
+    <div class="roadmap-grid">
+      {{range .Roadmaps}}
+      <a href="{{$.BasePath}}{{.ID}}/index.html" class="roadmap-card">
+        <h2>{{.Title}}</h2>
+        {{if .Description}}<p>{{.Description}}</p>{{end}}
+        <div class="card-progress" data-roadmap="{{.ID}}">
+          <div class="progress-bar"></div>
+          <span class="progress-label">0%</span>
+        </div>
+      </a>
+      {{end}}
+    </div>
+
+    {{if .Site.Author}}
+    <footer class="site-footer">
+      <span>by {{.Site.Author}}</span>
+      {{if .Site.License}}<span> · {{.Site.License}}</span>{{end}}
+    </footer>
+    {{end}}
+  </main>
+
+  <script>
+    window.SITE_CONFIG = { basePath: {{.BasePathJSON}} };
+    window.ROADMAP_IDS = {{.RoadmapIdsJSON}};
+    window.ROADMAP_NODE_IDS = {{.NodeIdsJSON}};
+  </script>
+  <script src="{{.BasePath}}app.js"></script>
+</body>
+</html>

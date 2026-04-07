@@ -1,0 +1,170 @@
+site:
+  title: Frontend Beginner Roadmap
+  description: フロントエンド開発の基礎を身につけるためのロードマップ
+  brandColor: "#0ea5e9"
+  author: your-name
+  license: CC-BY-4.0
+  repo: https://github.com/your-name/your-repo
+  editBranch: main
+  basePath: ""
+  siteUrl: ""  # 公開URLを設定すると sitemap.xml / feed.rss が生成されます (例: https://your-name.github.io/your-repo)
+
+roadmaps:
+  - id: frontend
+    title: Frontend
+    description: ブラウザで動くものを作れるようになるまでの道筋
+    nodes:
+      - id: internet
+        title: インターネットの仕組み
+        type: required
+        children:
+          - id: how-internet-works
+            title: インターネットはどう動くか
+          - id: http
+            title: HTTP / HTTPS
+            type: required
+          - id: dns
+            title: DNS
+            type: required
+          - id: browsers
+            title: ブラウザの仕組み
+            type: optional
+
+      - id: html
+        title: HTML
+        type: required
+        parents: [internet]
+        children:
+          - id: html-basics
+            title: 基本要素とセマンティクス
+          - id: html-forms
+            title: フォームとバリデーション
+          - id: html-accessibility
+            title: アクセシビリティ
+            type: optional
+
+      - id: css
+        title: CSS
+        type: required
+        parents: [html]
+        children:
+          - id: css-basics
+            title: セレクタ・ボックスモデル・カスケード
+          - id: css-layout
+            title: Flexbox / Grid
+          - id: css-responsive
+            title: レスポンシブデザイン
+          - id: css-tailwind
+            title: Tailwind CSS
+            type: alternative
+          - id: css-sass
+            title: Sass / SCSS
+            type: optional
+
+      - id: javascript
+        title: JavaScript
+        type: required
+        parents: [html]
+        children:
+          - id: js-basics
+            title: 変数・関数・制御構文・型
+          - id: js-dom
+            title: DOM 操作とイベント
+          - id: js-async
+            title: 非同期処理 (Promise / async/await)
+          - id: js-fetch
+            title: Fetch API / HTTP 通信
+          - id: js-es6
+            title: ES6+ 構文
+            type: optional
+
+      - id: version-control
+        title: バージョン管理 (Git)
+        type: required
+        parents: [javascript]
+        children:
+          - id: git-basics
+            title: コミット・ブランチ・マージ
+          - id: git-github
+            title: GitHub の使い方
+
+      - id: package-manager
+        title: パッケージマネージャ (npm / pnpm)
+        type: required
+        parents: [javascript]
+        children:
+          - id: npm-basics
+            title: npm / npx の基本
+          - id: package-json
+            title: package.json の読み方
+
+      - id: framework
+        title: フロントエンドフレームワーク
+        type: required
+        parents: [version-control, package-manager]
+        children:
+          - id: react
+            title: React
+            type: required
+          - id: vue
+            title: Vue
+            type: alternative
+          - id: svelte
+            title: Svelte
+            type: alternative
+
+      - id: build-tools
+        title: ビルドツール
+        type: optional
+        parents: [framework]
+        children:
+          - id: vite
+            title: Vite
+            type: required
+          - id: webpack
+            title: Webpack
+            type: optional
+
+      - id: testing
+        title: テスト
+        type: optional
+        parents: [framework]
+        children:
+          - id: unit-test
+            title: ユニットテスト (Vitest / Jest)
+          - id: e2e-test
+            title: E2E テスト (Playwright)
+            type: optional
+
+  - id: tools
+    title: 開発ツール
+    description: 現代のフロントエンド開発に必要なツール群
+    nodes:
+      - id: git
+        title: Git
+        type: required
+        children:
+          - id: git-basics
+            title: 基本コマンド (clone / commit / push)
+          - id: git-branch
+            title: ブランチ戦略
+            type: optional
+      - id: editor
+        title: エディタ
+        type: required
+        children:
+          - id: vscode
+            title: VS Code
+          - id: vscode-extensions
+            title: 拡張機能
+            type: optional
+      - id: devtools
+        title: ブラウザ DevTools
+        type: required
+        children:
+          - id: devtools-elements
+            title: Elements / Styles パネル
+          - id: devtools-network
+            title: Network パネル
+          - id: devtools-console
+            title: Console デバッグ

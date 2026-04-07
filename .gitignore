@@ -1,0 +1,19 @@
+# Build output
+dist/
+roadmapper
+roadmapper.exe
+
+# Demo directories (generated during development)
+demo-*/
+
+# Editor
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+*.test

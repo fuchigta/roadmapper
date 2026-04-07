@@ -1,0 +1,94 @@
+package layout_test
+
+import (
+	"testing"
+
+	"github.com/fuchigta/roadmapper/internal/config"
+	"github.com/fuchigta/roadmapper/internal/graph"
+	"github.com/fuchigta/roadmapper/internal/layout"
+)
+
+func makeConfig() *config.Config {
+	return &config.Config{
+		Site: config.Site{
+			BrandColor: "#4f46e5",
+			Layout: config.Layout{
+				RankDir: "TB",
+				NodeSep: 50,
+				RankSep: 80,
+			},
+		},
+	}
+}
+
+func TestCompute_basic(t *testing.T) {
+	rm := &config.Roadmap{
+		ID: "test", Title: "Test",
+		Nodes: []*config.Node{
+			{
+				ID: "a", Title: "A", Type: config.NodeTypeRequired,
+				Children: []*config.Node{
+					{ID: "b", Title: "B", Type: config.NodeTypeRequired},
+					{ID: "c", Title: "C", Type: config.NodeTypeOptional},
+				},
+			},
+		},
+	}
+
+	g, err := graph.Build(rm)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	cfg := makeConfig()
+	result, err := layout.Compute(g, cfg)
+	if err != nil {
+		t.Fatalf("Compute: %v", err)
+	}
+
+	if len(result.Nodes) != 3 {
+		t.Errorf("want 3 nodes in result, got %d", len(result.Nodes))
+	}
+
+	for id, nl := range result.Nodes {
+		if nl.Width == 0 || nl.Height == 0 {
+			t.Errorf("node %q has zero width/height", id)
+		}
+		if nl.X == 0 && nl.Y == 0 && id != "a" {
+			t.Errorf("node %q appears to be at origin (layout may have failed)", id)
+		}
+	}
+
+	// dagre は TB レイアウトで a が b, c より上になるはず
+	aY := result.Nodes["a"].Y
+	bY := result.Nodes["b"].Y
+	if aY >= bY {
+		t.Errorf("TB layout: node a (y=%v) should be above node b (y=%v)", aY, bY)
+	}
+}
+
+func TestCompute_manualOverride(t *testing.T) {
+	x, y := 500.0, 200.0
+	rm := &config.Roadmap{
+		ID: "test", Title: "Test",
+		Nodes: []*config.Node{
+			{ID: "a", Title: "A", Type: config.NodeTypeRequired, X: &x, Y: &y},
+			{ID: "b", Title: "B", Type: config.NodeTypeRequired},
+		},
+	}
+
+	g, err := graph.Build(rm)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	result, err := layout.Compute(g, makeConfig())
+	if err != nil {
+		t.Fatalf("Compute: %v", err)
+	}
+
+	na := result.Nodes["a"]
+	if na.X != 500 || na.Y != 200 {
+		t.Errorf("manual override not applied: got x=%v y=%v", na.X, na.Y)
+	}
+}
