@@ -112,6 +112,53 @@ const panel = document.getElementById('side-panel');
 const overlay = document.getElementById('overlay');
 let currentNodeId = null;
 
+// ===== Panel resize =====
+const PANEL_WIDTH_KEY = 'roadmapper:panel-width';
+const PANEL_MIN = 320;
+function panelMax() { return Math.min(window.innerWidth * 0.8, 960); }
+
+function applySavedPanelWidth() {
+  if (!panel || window.innerWidth <= 600) return;
+  const saved = parseInt(localStorage.getItem(PANEL_WIDTH_KEY) || '', 10);
+  if (!isNaN(saved)) {
+    panel.style.width = Math.max(PANEL_MIN, Math.min(saved, panelMax())) + 'px';
+  }
+}
+
+function initPanelResize() {
+  const resizer = document.getElementById('panel-resizer');
+  if (!resizer || !panel) return;
+  let startX = 0;
+  let startWidth = 0;
+
+  resizer.addEventListener('pointerdown', (e) => {
+    if (window.innerWidth <= 600) return;
+    e.preventDefault();
+    startX = e.clientX;
+    startWidth = panel.offsetWidth;
+    resizer.classList.add('dragging');
+    panel.classList.add('resizing');
+    resizer.setPointerCapture(e.pointerId);
+  });
+
+  resizer.addEventListener('pointermove', (e) => {
+    if (!resizer.classList.contains('dragging')) return;
+    const delta = startX - e.clientX;
+    const newWidth = Math.max(PANEL_MIN, Math.min(startWidth + delta, panelMax()));
+    panel.style.width = newWidth + 'px';
+  });
+
+  resizer.addEventListener('pointerup', () => {
+    if (!resizer.classList.contains('dragging')) return;
+    resizer.classList.remove('dragging');
+    panel.classList.remove('resizing');
+    localStorage.setItem(PANEL_WIDTH_KEY, parseInt(panel.style.width) || '');
+  });
+}
+
+applySavedPanelWidth();
+initPanelResize();
+
 function openPanel(nodeId) {
   currentNodeId = nodeId;
   const data = nodeData[nodeId];
