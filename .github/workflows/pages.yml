@@ -17,9 +17,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-      - name: Install roadmapper
-        run: go install github.com/fuchigta/roadmapper/cmd/roadmapper@latest
-      - name: Build
+      - name: Build roadmapper
+        run: go build -o /usr/local/bin/roadmapper ./cmd/roadmapper
+      - name: Build site
         run: roadmapper build -c docs/roadmap.yml -o dist
       - uses: actions/upload-pages-artifact@v3
         with:
