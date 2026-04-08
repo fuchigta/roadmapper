@@ -201,6 +201,26 @@ a { color: var(--brand); }
 .roadmap-node rect { transition: filter .15s, opacity .2s; }
 .roadmap-node:hover rect { filter: brightness(1.1) drop-shadow(0 0 6px color-mix(in srgb, var(--brand) 40%, transparent)); }
 
+/* ダークテーマ: ノードが背景に溶けるのを回避 */
+[data-theme="dark"] .roadmap-node[data-type="required"] rect {
+  fill: #475569;
+  stroke: #94a3b8;
+}
+[data-theme="dark"] .roadmap-node[data-type="optional"] rect {
+  fill: #1e293b;
+  stroke: #64748b;
+}
+[data-theme="dark"] .roadmap-node[data-type="optional"] text:not(.node-badge) {
+  fill: #cbd5e1;
+}
+[data-theme="dark"] .roadmap-node[data-type="alternative"] rect {
+  fill: #312e81;
+  stroke: #818cf8;
+}
+[data-theme="dark"] .roadmap-node[data-type="alternative"] text:not(.node-badge) {
+  fill: #e0e7ff;
+}
+
 /* ノード状態による色付け (JS から data-state 属性を付ける) */
 .roadmap-node[data-state="done"] rect {
   fill: #166534 !important;
@@ -327,6 +347,36 @@ a { color: var(--brand); }
   margin-bottom: 10px;
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* テーブル */
+.panel-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+  font-size: .85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.panel-content thead {
+  background: var(--bg-secondary);
+}
+.panel-content th,
+.panel-content td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.panel-content th {
+  font-weight: 600;
+  color: var(--text);
+}
+.panel-content tbody tr:last-child td {
+  border-bottom: none;
+}
+.panel-content tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--bg-secondary) 50%, transparent);
 }
 
 /* チェックリスト */
