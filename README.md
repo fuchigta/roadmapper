@@ -3,12 +3,6 @@
 学習ロードマップを [roadmap.sh](https://roadmap.sh) 風の静的サイトとして出力する Go 製 CLI ツールです。
 GitHub Pages / GitLab Pages に **Go のシングルバイナリだけ** で配信できます。Node.js・graphviz・Python 等の外部依存は一切不要です。
 
-## スクリーンショット
-
-> `roadmapper build` が生成するサイトの例 — SVG ダイアグラム + サイドパネル
-
-![demo](docs/demo.gif)
-
 ## 特徴
 
 - **シングルバイナリ** — Go の `//go:embed` でテンプレート・アセットをすべて同梱
