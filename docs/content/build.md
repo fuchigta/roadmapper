@@ -1,10 +1,7 @@
-## build コマンド
+## ビルドの概要
 
-静的サイトを `dist/` ディレクトリに生成します。
-
-```bash
-roadmapper build -c my-roadmap/roadmap.yml -o my-roadmap/dist
-```
+`roadmapper build` は `roadmap.yml` とコンテンツ Markdown を読み込み、
+外部ランタイム不要で完全な静的サイトを生成します。
 
 生成されるファイル:
 
@@ -19,19 +16,7 @@ dist/
 └── feed.rss            # siteUrl が設定されている場合
 ```
 
-## basePath の設定
+## 学ぶこと
 
-GitHub Pages のリポジトリ名サブディレクトリで公開する場合は `basePath` を設定します。
-
-```yaml
-site:
-  basePath: /my-repo/      # https://user.github.io/my-repo/
-```
-
-ルートで公開する場合 (カスタムドメインなど) は空欄のままにします。
-
-## サブタスク
-
-- [ ] `build` コマンドで `dist/` が生成された
-- [ ] `dist/index.html` をブラウザで開いて確認した
-- [ ] `basePath` を自分のリポジトリ名に合わせた
+- **build コマンドで静的ファイル生成** — `-c` / `-o` オプションと出力ファイル一覧
+- **basePath の設定** — サブディレクトリ公開とルート公開の使い分け

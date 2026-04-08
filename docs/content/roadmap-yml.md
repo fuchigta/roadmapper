@@ -1,12 +1,13 @@
 ## roadmap.yml の全体構造
 
+`roadmap.yml` は **サイト設定** と **ロードマップ定義** の 2 つのトップレベルキーで構成されます。
+
 ```yaml
 site:
   title: My Roadmap
   description: ロードマップの説明文
-  brandColor: "#6366f1"   # メインカラー (HEX)
-  author: your-name
-  basePath: /my-repo/     # GitHub Pages のサブディレクトリ
+  brandColor: "#6366f1"
+  basePath: /my-repo/
   siteUrl: https://your-name.github.io/my-repo
 
 roadmaps:
@@ -17,37 +18,12 @@ roadmaps:
       - id: start
         title: はじめる
         type: required
-        children:
-          - id: step1
-            title: ステップ 1
 ```
 
-## site セクション
+## 学ぶこと
 
-| キー | 説明 |
-|---|---|
-| `title` | サイトタイトル |
-| `description` | メタ description |
-| `brandColor` | テーマカラー (HEX) |
-| `basePath` | GitHub Pages サブディレクトリ (例: `/my-repo/`) |
-| `siteUrl` | 公開 URL。設定すると sitemap.xml と RSS が生成される |
-| `author` | 著者名 |
-| `repo` | リポジトリ URL (「ソースを見る」リンクに使用) |
-| `editBranch` | 編集リンクのブランチ名 |
-
-## ノード定義
-
-| キー | 説明 |
-|---|---|
-| `id` | ノードの一意 ID |
-| `title` | ノード名 |
-| `type` | `required` / `optional` / `alternative` |
-| `children` | 子ノードのリスト |
-| `parents` | 追加の親ノード ID リスト (複数親の DAG) |
-
-## サブタスク
-
-- [ ] site セクションを自分の情報に書き換えた
-- [ ] ノードの id と title を定義した
-- [ ] type を設定した
-- [ ] validate でエラーゼロを確認した
+- **site セクション** — タイトル・テーマカラー・公開 URL など、サイト全体の設定
+- **ノード定義** — `id` / `title` の命名ルールと最小構成
+- **ノードタイプ** — `required` / `optional` / `alternative` の違いと表示
+- **親子関係と依存関係** — `children` / `parents` による DAG の表現
+- **複数ロードマップ** — `roadmaps:` 配列を使ったマルチマップ構成

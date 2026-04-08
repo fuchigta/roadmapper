@@ -7,7 +7,7 @@ links:
 ## コンテンツ Markdown の配置
 
 ノード ID と同じ名前の `.md` ファイルを `content/` ディレクトリに置くと、
-サイドパネルに詳細説明が表示されます。
+クリック時のサイドパネルに詳細説明が表示されます。
 
 ```
 content/
@@ -16,38 +16,11 @@ content/
 └── javascript.md
 ```
 
-## frontmatter でリンクを追加
-
-ファイル先頭の YAML frontmatter でリンクリストを定義できます。
-
-```markdown
----
-links:
-  - { title: "MDN: HTML", url: "https://developer.mozilla.org/ja/docs/Web/HTML" }
-  - { title: "HTML Living Standard", url: "https://html.spec.whatwg.org/" }
----
+ファイルが存在しないノードはサイドパネルが空欄になります。
 
 ## 学ぶこと
 
-本文をここに書く...
-```
-
-## チェックリストで進捗管理
-
-GFM のタスクリスト構文を使うと、ノードの進捗チェックボックスが有効になります。
-
-```markdown
-## サブタスク
-
-- [ ] `<header>` / `<main>` / `<footer>` を使い分けられる
-- [ ] フォームを正しく書ける
-- [x] インストールが完了した  ← チェック済みの例
-```
-
-チェックした状態は localStorage に保存されます。
-
-## サブタスク
-
-- [ ] ノード ID と同じ名前の `.md` ファイルを `content/` に作成した
-- [ ] frontmatter でリンクを追加した
-- [ ] チェックリストを書いて進捗管理を試した
+- **frontmatter でリンクを追加** — `links:` キーで参考 URL をサイドパネルに表示する方法
+- **チェックリストで進捗管理** — GFM タスクリスト構文と localStorage への保存
+- **コードブロックとシンタックスハイライト** — 言語指定フェンスと chroma テーマ
+- **Mermaid 図の埋め込み** — フローチャートやシーケンス図を Markdown 内に記述する方法

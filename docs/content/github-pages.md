@@ -4,58 +4,19 @@ links:
   - { title: "GitHub Actions ドキュメント", url: "https://docs.github.com/ja/actions" }
 ---
 
-## deploy コマンドで GitHub Actions ファイルを生成
+## GitHub Pages 公開の流れ
 
-```bash
-roadmapper deploy --target github -c my-roadmap/roadmap.yml
+roadmapper は `deploy` コマンドで GitHub Actions ワークフローを自動生成します。
+`main` ブランチへの push をトリガーに、ビルドからデプロイまでを自動実行します。
+
+```
+roadmapper deploy → .github/workflows/pages.yml 生成
+     ↓
+git push → Actions 起動 → roadmapper build → dist/ → Pages 公開
 ```
 
-`.github/workflows/pages.yml` が生成されます。
-既存のファイルがある場合は差分を表示して上書きするか確認します。
+## 学ぶこと
 
-生成される Actions ワークフロー:
-
-```yaml
-name: Deploy to GitHub Pages
-on:
-  push:
-    branches: [main]
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.22"
-      - run: go install github.com/fuchigta/roadmapper/cmd/roadmapper@latest
-      - run: roadmapper build -c roadmap.yml -o dist
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-      - uses: actions/deploy-pages@v4
-```
-
-## GitHub リポジトリの Pages 設定
-
-1. GitHub リポジトリの **Settings → Pages** を開く
-2. Source を **GitHub Actions** に設定する
-3. `main` ブランチに push すると自動デプロイが実行される
-
-## siteUrl の設定
-
-公開 URL が確定したら `roadmap.yml` の `siteUrl` を設定します。
-
-```yaml
-site:
-  siteUrl: https://your-name.github.io/my-repo
-```
-
-これで `sitemap.xml` と `feed.rss` が生成されるようになります。
-
-## サブタスク
-
-- [ ] `roadmapper deploy --target github` で Actions ファイルを生成した
-- [ ] GitHub リポジトリの Settings → Pages で Source を GitHub Actions に設定した
-- [ ] `main` に push してデプロイが成功した
-- [ ] `siteUrl` を設定して sitemap.xml の生成を確認した
+- **deploy --target github で Actions ファイル生成** — 生成される workflow の構造と再生成時の動作
+- **リポジトリの Pages 設定** — Settings → Pages の Source 切替と独自ドメイン設定
+- **siteUrl で sitemap / RSS を有効化** — 公開 URL 設定後に生成される追加ファイル
