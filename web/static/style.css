@@ -313,6 +313,8 @@ a { color: var(--brand); }
 .panel-content {
   flex: 1;
   overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: 4px;
 }
 
 /* Markdown content inside panel */
