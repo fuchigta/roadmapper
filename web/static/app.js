@@ -248,7 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // テーマトグル
   const toggleBtn = document.getElementById('theme-toggle');
-  const savedTheme = localStorage.getItem('roadmapper:theme') || 'light';
+  const savedTheme = localStorage.getItem('roadmapper:theme') ||
+    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   document.documentElement.dataset.theme = savedTheme;
   updateThemeIcon(savedTheme);
   toggleBtn?.addEventListener('click', () => {
