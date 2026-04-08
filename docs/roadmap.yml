@@ -1,0 +1,129 @@
+site:
+  title: roadmapper 使い方ガイド
+  description: roadmapper で学習ロードマップサイトを作り GitHub Pages に公開するまでの完全ガイド
+  brandColor: "#6366f1"
+  author: fuchigta
+  license: Apache-2.0
+  repo: https://github.com/fuchigta/roadmapper
+  editBranch: main
+  basePath: /roadmapper/
+  siteUrl: https://fuchigta.github.io/roadmapper
+
+roadmaps:
+  - id: getting-started
+    title: はじめる
+    description: roadmapper をインストールして最初のロードマップサイトを動かすまでの手順
+    nodes:
+      - id: install
+        title: インストール
+        type: required
+        children:
+          - id: install-go
+            title: Go のインストール
+            type: required
+          - id: install-binary
+            title: roadmapper のインストール
+            type: required
+
+      - id: init
+        title: プロジェクト初期化
+        type: required
+        parents: [install]
+        children:
+          - id: init-command
+            title: init コマンドでスケルトン生成
+            type: required
+          - id: dir-structure
+            title: ディレクトリ構造を理解する
+            type: required
+
+      - id: local-preview
+        title: ローカルプレビュー
+        type: required
+        parents: [init]
+        children:
+          - id: validate-command
+            title: validate で設定チェック
+          - id: dev-command
+            title: dev でライブプレビュー
+            type: required
+
+  - id: customize
+    title: カスタマイズ
+    description: roadmap.yml とコンテンツ Markdown を編集してロードマップを自分のものにする
+    nodes:
+      - id: roadmap-yml
+        title: roadmap.yml の書き方
+        type: required
+        children:
+          - id: site-section
+            title: site セクション (タイトル・色・URL)
+            type: required
+          - id: node-definition
+            title: ノード定義 (id / title / type)
+            type: required
+          - id: node-types
+            title: ノードタイプ (required / optional / alternative)
+            type: required
+          - id: node-relations
+            title: 親子関係と依存関係 (parents / children)
+            type: required
+          - id: multiple-roadmaps
+            title: 複数ロードマップ
+            type: optional
+
+      - id: content-md
+        title: コンテンツ Markdown
+        type: optional
+        parents: [roadmap-yml]
+        children:
+          - id: links-frontmatter
+            title: frontmatter でリンクを追加
+          - id: checklist-items
+            title: チェックリストで進捗管理
+            type: required
+          - id: code-highlighting
+            title: コードブロックとシンタックスハイライト
+            type: optional
+          - id: mermaid-diagrams
+            title: Mermaid 図の埋め込み
+            type: optional
+
+  - id: publish
+    title: 公開
+    description: ビルドして GitHub Pages / GitLab Pages にデプロイする
+    nodes:
+      - id: build
+        title: ビルド
+        type: required
+        children:
+          - id: build-command
+            title: build コマンドで静的ファイル生成
+            type: required
+          - id: basepath-config
+            title: basePath の設定 (サブディレクトリ公開)
+            type: required
+
+      - id: github-pages
+        title: GitHub Pages に公開
+        type: required
+        parents: [build]
+        children:
+          - id: deploy-github
+            title: deploy --target github で Actions ファイル生成
+            type: required
+          - id: pages-settings
+            title: リポジトリの Pages 設定
+            type: required
+          - id: site-url-config
+            title: siteUrl で sitemap / RSS を有効化
+            type: optional
+
+      - id: gitlab-pages
+        title: GitLab Pages に公開
+        type: alternative
+        parents: [build]
+        children:
+          - id: deploy-gitlab
+            title: deploy --target gitlab で CI ファイル生成
+            type: required
