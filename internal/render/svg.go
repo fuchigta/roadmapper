@@ -10,6 +10,8 @@ import (
 	"github.com/fuchigta/roadmapper/internal/layout"
 )
 
+const fontSize = 13
+
 const svgPadding = 40.0
 
 // EdgeStyle はエッジの見た目を決める。
@@ -113,17 +115,26 @@ func renderNode(sb *strings.Builder, n *graph.Node, lr *layout.Result) {
 		x, y, nl.Width, nl.Height, rx,
 		colors.fill, colors.stroke)
 
-	// テキスト (中央揃え)
-	fontSize := 13
-	if len(n.Title) > 20 {
-		fontSize = 11
-	}
+	// テキスト (中央揃え・複数行対応)
+	maxInner := nl.Width - layout.NodePaddingX
+	lines := layout.WrapTitle(n.Title, fontSize, maxInner)
+	nLines := len(lines)
+	// 1 行目の y オフセット: 行ブロック全体を縦中央に揃える
+	firstDY := -float64(nLines-1) * layout.LineHeight / 2
 	fmt.Fprintf(sb,
 		`<text x="%v" y="%v" `+
 			`text-anchor="middle" dominant-baseline="middle" `+
 			`font-family="system-ui,sans-serif" font-size="%d" `+
-			`fill="%s" font-weight="500">%s</text>`,
-		nl.X, nl.Y, fontSize, colors.text, escapeXML(n.Title))
+			`fill="%s" font-weight="500">`,
+		nl.X, nl.Y, fontSize, colors.text)
+	for i, line := range lines {
+		if i == 0 {
+			fmt.Fprintf(sb, `<tspan x="%v" dy="%.4g">%s</tspan>`, nl.X, firstDY, escapeXML(line))
+		} else {
+			fmt.Fprintf(sb, `<tspan x="%v" dy="%.4g">%s</tspan>`, nl.X, layout.LineHeight, escapeXML(line))
+		}
+	}
+	sb.WriteString(`</text>`)
 
 	// type バッジ (optional / alternative のみ)
 	if n.Node.Type != config.NodeTypeRequired {

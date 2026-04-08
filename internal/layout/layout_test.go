@@ -1,6 +1,7 @@
 package layout_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/fuchigta/roadmapper/internal/config"
@@ -19,6 +20,65 @@ func makeConfig() *config.Config {
 			},
 		},
 	}
+}
+
+func TestWrapTitle(t *testing.T) {
+	const (
+		testFontSize = 13.0
+		testMaxInner = 260.0 - 24.0 // maxNodeWidth - NodePaddingX
+	)
+	tests := []struct {
+		name      string
+		title     string
+		wantLines int
+		wantTrunc bool // 最終行が … を含む
+	}{
+		{"short ascii", "Go", 1, false},
+		{"long ascii with spaces", "Introduction to Frontend Development Basics", 2, false},
+		{"long japanese no spaces", "フロントエンド開発の基礎と応用について学ぶ", 2, false},
+		{"3 lines no truncation", "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめも", 3, false},
+		{"very long truncated", "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんアイウエオカキクケコサシスセソ", 3, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lines := layout.WrapTitle(tt.title, testFontSize, testMaxInner)
+			if len(lines) != tt.wantLines {
+				t.Errorf("WrapTitle(%q): got %d lines, want %d", tt.title, len(lines), tt.wantLines)
+			}
+			if tt.wantTrunc {
+				last := lines[len(lines)-1]
+				if !strings.HasSuffix(last, "…") {
+					t.Errorf("WrapTitle(%q): last line %q should end with …", tt.title, last)
+				}
+			}
+		})
+	}
+}
+
+func TestNodeSize(t *testing.T) {
+	const (
+		minW = 180.0
+		minH = 50.0
+		maxW = 260.0
+	)
+	t.Run("short title stays at minNodeWidth", func(t *testing.T) {
+		w, h := layout.NodeSize("Go")
+		if w != minW {
+			t.Errorf("want width=%v, got %v", minW, w)
+		}
+		if h != minH {
+			t.Errorf("want height=%v, got %v", minH, h)
+		}
+	})
+	t.Run("long title increases width or height", func(t *testing.T) {
+		w, h := layout.NodeSize("フロントエンド開発の基礎と応用について")
+		if w <= minW && h <= minH {
+			t.Errorf("long title should increase width or height: w=%v h=%v", w, h)
+		}
+		if w > maxW {
+			t.Errorf("width %v exceeds maxNodeWidth %v", w, maxW)
+		}
+	})
 }
 
 func TestCompute_basic(t *testing.T) {
