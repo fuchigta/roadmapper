@@ -9,7 +9,7 @@ before:
 
 builds:
   - id: roadmapper
-    dir: ./cmd/roadmapper
+    main: ./cmd/roadmapper/main.go
     binary: roadmapper
     ldflags:
       - -s -w
