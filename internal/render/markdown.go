@@ -3,6 +3,7 @@ package render
 import (
 	"bytes"
 	"regexp"
+	"strings"
 
 	"github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/alecthomas/chroma/v2/styles"
@@ -31,7 +32,7 @@ var md = goldmark.New(
 		highlighting.NewHighlighting(
 			highlighting.WithStyle("github"),
 			highlighting.WithFormatOptions(
-				html.WithClasses(false),
+				html.WithClasses(true),
 				html.WithLineNumbers(false),
 			),
 			highlighting.WithGuessLanguage(false),
@@ -86,16 +87,26 @@ func unescapeHTML(s string) string {
 	return s
 }
 
-// ChromaCSS はシンタックスハイライト用の CSS を返す。
+// ChromaCSS はシンタックスハイライト用の CSS を返す (ライト + ダーク)。
 func ChromaCSS() string {
-	style := styles.Get("github")
+	light := chromaCSSForStyle("github", "")
+	dark := chromaCSSForStyle("dracula", "[data-theme=\"dark\"] ")
+	return light + "\n" + dark
+}
+
+// chromaCSSForStyle は指定スタイルの Chroma CSS を生成し、各ルールに prefix を付ける。
+func chromaCSSForStyle(styleName, prefix string) string {
+	style := styles.Get(styleName)
 	if style == nil {
 		style = styles.Fallback
 	}
 	formatter := html.New(html.WithClasses(true))
 	var buf bytes.Buffer
 	_ = formatter.WriteCSS(&buf, style)
-	return buf.String()
+	if prefix == "" {
+		return buf.String()
+	}
+	return strings.ReplaceAll(buf.String(), ".chroma", prefix+".chroma")
 }
 
 // mermaidRe は HTML 文字列に mermaid ブロックが含まれるか判定する。

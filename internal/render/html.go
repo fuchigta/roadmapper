@@ -62,6 +62,7 @@ func RenderRoadmapPage(
 		"NodeDataJSON":    template.JS(nodeDataJSON),
 		"HasMermaid":      hasMermaid,
 		"OGPUrl":          ogpURL,
+		"ChromaCSS":       template.CSS(ChromaCSS()),
 	}
 
 	return renderTemplate(webFS, "templates/roadmap.html", tmplData)
