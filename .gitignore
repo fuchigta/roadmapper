@@ -1,7 +1,7 @@
 # Build output
 dist/
-roadmapper
-roadmapper.exe
+/roadmapper
+/roadmapper.exe
 
 # Demo directories (generated during development)
 demo-*/
