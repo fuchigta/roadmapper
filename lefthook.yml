@@ -13,6 +13,11 @@ pre-commit:
     "fmt.sh":
       runner: bash
 
+commit-msg:
+  scripts:
+    "conventional.sh":
+      runner: bash
+
 pre-push:
   scripts:
     "test.sh":
