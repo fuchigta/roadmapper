@@ -14,9 +14,11 @@ import (
 
 // NodeMeta はフロントエンドに渡すノードのメタデータ。
 type NodeMeta struct {
-	Title string        `json:"title"`
-	HTML  string        `json:"html"`
-	Links []config.Link `json:"links,omitempty"`
+	Title    string        `json:"title"`
+	HTML     string        `json:"html"`
+	Links    []config.Link `json:"links,omitempty"`
+	Parents  []string      `json:"parents,omitempty"`
+	Children []string      `json:"children,omitempty"`
 }
 
 // RenderRoadmapPage は roadmap.html を使ってロードマップページの HTML を生成する。
@@ -121,10 +123,20 @@ func RenderIndexPage(
 func buildNodeMeta(g *graph.Graph, nodeHTML map[string]string) map[string]NodeMeta {
 	meta := map[string]NodeMeta{}
 	for _, n := range g.Nodes {
+		parentIDs := make([]string, len(n.ParentNodes))
+		for i, p := range n.ParentNodes {
+			parentIDs[i] = p.ID
+		}
+		childIDs := make([]string, len(n.ChildrenNodes))
+		for i, c := range n.ChildrenNodes {
+			childIDs[i] = c.ID
+		}
 		meta[n.ID] = NodeMeta{
-			Title: n.Title,
-			HTML:  nodeHTML[n.ID],
-			Links: n.Node.Links,
+			Title:    n.Title,
+			HTML:     nodeHTML[n.ID],
+			Links:    n.Node.Links,
+			Parents:  parentIDs,
+			Children: childIDs,
 		}
 	}
 	return meta

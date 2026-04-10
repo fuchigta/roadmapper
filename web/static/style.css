@@ -174,6 +174,8 @@ a { color: var(--brand); }
 .toolbar {
   display: flex;
   gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 .toolbar button {
   padding: 6px 14px;
@@ -187,19 +189,103 @@ a { color: var(--brand); }
 }
 .toolbar button:hover { background: var(--brand-light); border-color: var(--brand); }
 
+/* ===== Node Search ===== */
+.search-wrap {
+  position: relative;
+}
+#node-search {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-size: .85rem;
+  width: 200px;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+#node-search:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 20%, transparent);
+}
+.search-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 280px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  list-style: none;
+  z-index: 300;
+  padding: 4px;
+}
+.search-results li {
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: .875rem;
+}
+.search-results li:hover,
+.search-results li.selected {
+  background: var(--brand-light);
+  color: var(--brand);
+}
+.search-highlight {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  animation: search-pulse 1s ease-out;
+}
+@keyframes search-pulse {
+  0% { outline-color: var(--brand); }
+  100% { outline-color: transparent; }
+}
+
 /* ===== SVG Diagram ===== */
 .diagram-wrap {
-  overflow: auto;
+  overflow: hidden;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 8px;
+  position: relative;
+  cursor: grab;
+  user-select: none;
 }
-.roadmap-svg { display: block; }
+.diagram-wrap.panning { cursor: grabbing; }
+.roadmap-svg { display: block; transform-origin: 0 0; }
+
+/* ズームリセットボタン */
+.zoom-reset {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text);
+  opacity: 0.8;
+  transition: opacity var(--transition);
+}
+.zoom-reset:hover { opacity: 1; border-color: var(--brand); }
 
 /* ノード hover */
 .roadmap-node rect { transition: filter .15s, opacity .2s; }
 .roadmap-node:hover rect { filter: brightness(1.1) drop-shadow(0 0 6px color-mix(in srgb, var(--brand) 40%, transparent)); }
+
+/* 依存関係ハイライト */
+.roadmap-node.dim { opacity: 0.15; }
+.roadmap-node.highlight rect { filter: brightness(1.15) drop-shadow(0 0 8px color-mix(in srgb, var(--brand) 50%, transparent)); }
+.roadmap-edge { transition: opacity .2s; }
+.roadmap-edge.dim { opacity: 0.1; }
+.roadmap-edge.highlight { opacity: 1; stroke-width: 2.5px; }
 
 /* ダークテーマ: ノードが背景に溶けるのを回避 */
 [data-theme="dark"] .roadmap-node[data-type="required"] rect {
@@ -415,6 +501,66 @@ a { color: var(--brand); }
   font-size: .8rem;
   color: var(--text-muted);
   text-align: right;
+}
+
+/* ===== Panel Relations (前提条件/次のステップ) ===== */
+.panel-relations {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.panel-relation-group h4 {
+  font-size: .75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+}
+.panel-relation-group ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.panel-relation-group li a {
+  display: inline-block;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  font-size: .8rem;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--bg-secondary);
+  transition: background var(--transition), border-color var(--transition);
+}
+.panel-relation-group li a:hover {
+  background: var(--brand-light);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+/* ===== Share toast ===== */
+.share-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  background: #1e293b;
+  color: #f1f5f9;
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  font-size: .875rem;
+  z-index: 500;
+  opacity: 1;
+  transition: opacity .4s ease, transform .4s ease;
+  pointer-events: none;
+}
+.share-toast.fade-out {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
 }
 
 /* ===== Overlay ===== */

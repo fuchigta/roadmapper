@@ -38,13 +38,19 @@
         <span class="progress-label" id="progress-label">0%</span>
       </div>
       <div class="toolbar">
+        <div class="search-wrap">
+          <input type="search" id="node-search" placeholder="ノードを検索… (/)">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
         <button id="export-btn" title="進捗をエクスポート">エクスポート</button>
         <button id="import-btn" title="進捗をインポート">インポート</button>
+        <button id="share-btn" title="進捗をURLでシェア">シェア</button>
         <input type="file" id="import-file" accept=".json" style="display:none">
       </div>
     </div>
 
-    <div class="diagram-wrap">
+    <div class="diagram-wrap" id="diagram-wrap">
+      <button id="zoom-reset" class="zoom-reset" title="全体表示にリセット">⊡</button>
       {{.SVG}}
     </div>
   </main>
@@ -64,6 +70,16 @@
             <option value="skipped">スキップ</option>
           </select>
           <button id="panel-close" aria-label="閉じる">✕</button>
+        </div>
+      </div>
+      <div id="panel-relations" class="panel-relations" hidden>
+        <div id="panel-parents" class="panel-relation-group" hidden>
+          <h4>前提条件</h4>
+          <ul id="panel-parents-list"></ul>
+        </div>
+        <div id="panel-children" class="panel-relation-group" hidden>
+          <h4>次のステップ</h4>
+          <ul id="panel-children-list"></ul>
         </div>
       </div>
       <div id="panel-content" class="panel-content"></div>

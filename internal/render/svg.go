@@ -100,12 +100,25 @@ func renderNode(sb *strings.Builder, n *graph.Node, lr *layout.Result) {
 
 	colors := nodeColor[n.Node.Type]
 
+	// 親子IDリスト
+	parentIDs := make([]string, len(n.ParentNodes))
+	for i, p := range n.ParentNodes {
+		parentIDs[i] = p.ID
+	}
+	childIDs := make([]string, len(n.ChildrenNodes))
+	for i, c := range n.ChildrenNodes {
+		childIDs[i] = c.ID
+	}
+
 	// ノード外枠 (クリッカブル要素)
 	fmt.Fprintf(sb,
 		`<g class="roadmap-node" data-id=%q data-type=%q `+
+			`data-parents=%q data-children=%q `+
 			`transform="translate(%v,%v)" `+
 			`style="cursor:pointer">`,
-		n.ID, string(n.Node.Type), 0, 0)
+		n.ID, string(n.Node.Type),
+		strings.Join(parentIDs, ","), strings.Join(childIDs, ","),
+		0, 0)
 
 	// 影付き矩形
 	fmt.Fprintf(sb,
@@ -184,11 +197,13 @@ func renderEdge(sb *strings.Builder, parent, child *graph.Node, lr *layout.Resul
 	fmt.Fprintf(sb,
 		`<path d="M %v %v C %v %v %v %v %v %v" `+
 			`fill="none" stroke="%s" stroke-width="1.5" %s `+
-			`marker-end="url(#%s)"/>`,
+			`marker-end="url(#%s)" `+
+			`data-source=%q data-target=%q class="roadmap-edge"/>`,
 		x1, y1,
 		x1, midY, x2, midY,
 		x2, y2,
-		style.Color, dashAttr, markerID)
+		style.Color, dashAttr, markerID,
+		parent.ID, child.ID)
 }
 
 func escapeXML(s string) string {
