@@ -377,7 +377,8 @@ function initSearch() {
 
 // ===== キーボードナビゲーション =====
 function initKeyboard() {
-  const nodeIds = Object.keys(nodeData);
+  // go 側の json.Marshal はキーをアルファベット順にするため、DAG 順序を __order で渡している
+  const nodeIds = nodeData.__order || Object.keys(nodeData).filter(k => k !== '__order');
 
   document.addEventListener('keydown', (e) => {
     // 入力フォーカス中は無視

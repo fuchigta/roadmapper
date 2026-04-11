@@ -35,9 +35,12 @@ func RenderRoadmapPage(
 ) (string, error) {
 	colors := DeriveColors(cfg.Site.BrandColor)
 
-	// ノードデータ JSON
-	nodeMeta := buildNodeMeta(g, nodeHTML)
+	nodeMeta, nodeOrder := buildNodeMeta(g, nodeHTML)
 	nodeDataJSON, err := json.Marshal(nodeMeta)
+	if err != nil {
+		return "", err
+	}
+	nodeOrderJSON, err := json.Marshal(nodeOrder)
 	if err != nil {
 		return "", err
 	}
@@ -62,6 +65,7 @@ func RenderRoadmapPage(
 		"EditBranchJSON":  jsonStr(cfg.Site.EditBranch),
 		"RoadmapIdJSON":   jsonStr(rm.ID),
 		"NodeDataJSON":    template.JS(nodeDataJSON),
+		"NodeOrderJSON":   template.JS(nodeOrderJSON),
 		"HasMermaid":      hasMermaid,
 		"OGPUrl":          ogpURL,
 		"ChromaCSS":       template.CSS(ChromaCSS()),
@@ -86,14 +90,9 @@ func RenderIndexPage(
 	}
 	idsJSON, _ := json.Marshal(ids)
 
-	// ロードマップごとのノードID一覧 (index ページでの進捗計算用)
 	nodeIds := map[string][]string{}
 	for rmID, g := range graphs {
-		ns := make([]string, len(g.Nodes))
-		for i, n := range g.Nodes {
-			ns[i] = n.ID
-		}
-		nodeIds[rmID] = ns
+		nodeIds[rmID] = graphNodeOrder(g)
 	}
 	nodeIdsJSON, _ := json.Marshal(nodeIds)
 
@@ -120,16 +119,28 @@ func RenderIndexPage(
 	return renderTemplate(webFS, "templates/index.html", tmplData)
 }
 
-func buildNodeMeta(g *graph.Graph, nodeHTML map[string]string) map[string]NodeMeta {
-	meta := map[string]NodeMeta{}
-	for _, n := range g.Nodes {
+// graphNodeOrder は g.Nodes の DAG 順序でノード ID スライスを返す。
+func graphNodeOrder(g *graph.Graph) []string {
+	order := make([]string, len(g.Nodes))
+	for i, n := range g.Nodes {
+		order[i] = n.ID
+	}
+	return order
+}
+
+// buildNodeMeta は g.Nodes を1パスでメタデータマップと DAG 順序スライスを返す。
+// nodeHTML が nil の場合は HTML フィールドを空にする。
+func buildNodeMeta(g *graph.Graph, nodeHTML map[string]string) (map[string]NodeMeta, []string) {
+	meta := make(map[string]NodeMeta, len(g.Nodes))
+	order := make([]string, len(g.Nodes))
+	for i, n := range g.Nodes {
 		parentIDs := make([]string, len(n.ParentNodes))
-		for i, p := range n.ParentNodes {
-			parentIDs[i] = p.ID
+		for j, p := range n.ParentNodes {
+			parentIDs[j] = p.ID
 		}
 		childIDs := make([]string, len(n.ChildrenNodes))
-		for i, c := range n.ChildrenNodes {
-			childIDs[i] = c.ID
+		for j, c := range n.ChildrenNodes {
+			childIDs[j] = c.ID
 		}
 		meta[n.ID] = NodeMeta{
 			Title:    n.Title,
@@ -138,8 +149,9 @@ func buildNodeMeta(g *graph.Graph, nodeHTML map[string]string) map[string]NodeMe
 			Parents:  parentIDs,
 			Children: childIDs,
 		}
+		order[i] = n.ID
 	}
-	return meta
+	return meta, order
 }
 
 func renderTemplate(webFS fs.FS, name string, data any) (string, error) {

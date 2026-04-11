@@ -83,6 +83,8 @@ func validateNodesRec(nodes []*Node, allIDs, seen map[string]bool, prefix string
 
 		if n.ID == "" {
 			*errs = append(*errs, ValidationError{p + ".id", "id は必須です"})
+		} else if n.ID == "__order" {
+			*errs = append(*errs, ValidationError{p + ".id", `id "__order" はシステム予約済みです`})
 		} else if seen[n.ID] {
 			*errs = append(*errs, ValidationError{p + ".id", fmt.Sprintf("id %q が重複しています", n.ID)})
 		} else {

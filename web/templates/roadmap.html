@@ -91,7 +91,7 @@
   <div id="overlay" class="overlay"></div>
 
   <script>
-    window.ROADMAP_DATA = {{.NodeDataJSON}};
+    window.ROADMAP_DATA = Object.assign({{.NodeDataJSON}}, {__order: {{.NodeOrderJSON}}});
     window.SITE_CONFIG = {
       basePath: {{.BasePathJSON}},
       repo: {{.RepoJSON}},
