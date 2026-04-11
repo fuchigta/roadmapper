@@ -401,10 +401,16 @@ function initKeyboard() {
     if (e.key === 'j' || e.key === 'ArrowDown' || e.key === 'k' || e.key === 'ArrowUp') {
       e.preventDefault();
       const dir = (e.key === 'j' || e.key === 'ArrowDown') ? 1 : -1;
-      const cur = currentNodeId || nodeIds[0];
-      const idx = nodeIds.indexOf(cur);
-      const next = nodeIds[Math.max(0, Math.min(nodeIds.length - 1, idx + dir))];
-      if (next) openPanel(next);
+      // パネルが閉じている場合は j/↓ のみ先頭ノードを開く
+      if (!currentNodeId) {
+        if (dir > 0 && nodeIds[0]) openPanel(nodeIds[0]);
+        return;
+      }
+      const idx = nodeIds.indexOf(currentNodeId);
+      const nextIdx = idx + dir;
+      // 境界外なら何もしない
+      if (nextIdx < 0 || nextIdx >= nodeIds.length) return;
+      openPanel(nodeIds[nextIdx]);
       return;
     }
 
