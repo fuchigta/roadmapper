@@ -96,23 +96,23 @@ git tag -d vX.Y.Z
 
 ## Phase 3: CI ウォッチ
 
-タグ push 直後は run がまだ存在しない場合がある。以下の手順で ID を取得:
+タグ push 直後は run がまだ存在しない場合がある。`scripts/wait-for-run.sh` で待つ。
 
-1. `release.yml` の run ID を取得 (pending になるまで最大 30 秒リトライ):
+1. run ID を取得:
    ```bash
-   gh run list --workflow=release.yml --limit 1 --json databaseId,status,headSha
+   RELEASE_RUN=$(bash "${CLAUDE_SKILL_DIR}/scripts/wait-for-run.sh" release.yml "" 30)
+   PAGES_RUN=$(bash "${CLAUDE_SKILL_DIR}/scripts/wait-for-run.sh" pages.yml "" 30)
    ```
-2. `pages.yml` の run ID を取得 (pages は master push でトリガー。0-4 の master push 後に発生):
+   - `pages.yml` は master push でトリガーされるため、0-4 の push 後に発生する
+   - いずれかが exit 1 (タイムアウト) なら中断してユーザーにエスカレート
+
+2. **両方を並列で監視**:
    ```bash
-   gh run list --workflow=pages.yml --limit 1 --json databaseId,status,headSha
+   gh run watch "$RELEASE_RUN" --exit-status
+   gh run watch "$PAGES_RUN" --exit-status
    ```
-3. **両方を並列で監視**:
-   ```bash
-   gh run watch <release-run-id> --exit-status
-   gh run watch <pages-run-id> --exit-status
-   ```
-4. 両方成功 → Phase 5 へ
-5. いずれかが失敗 → Phase 4 へ
+3. 両方成功 → Phase 5 へ
+4. いずれかが失敗 → Phase 4 へ
 
 ---
 
