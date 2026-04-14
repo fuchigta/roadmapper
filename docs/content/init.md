@@ -11,9 +11,26 @@ links:
 # minimal テンプレート (最小構成)
 roadmapper init my-roadmap --template minimal
 
-# frontend-beginner テンプレート (複数ロードマップのサンプル)
+# blank テンプレート (roadmap.yml のスケルトンのみ・最速スタート)
+roadmapper init my-roadmap --template blank
+
+# frontend-beginner テンプレート (フロントエンド学習ロードマップ)
 roadmapper init my-roadmap --template frontend-beginner
+
+# backend-beginner テンプレート (バックエンド学習ロードマップ)
+roadmapper init my-roadmap --template backend-beginner
+
+# devops テンプレート (DevOps/インフラロードマップ)
+roadmapper init my-roadmap --template devops
 ```
+
+| テンプレート | 用途 |
+|---|---|
+| `minimal` | 最小構成のサンプル。構造を理解するのに最適 |
+| `blank` | `roadmap.yml` のスケルトンのみ。ゼロから書き始めたい場合 |
+| `frontend-beginner` | フロントエンド開発の学習ロードマップ (複数ロードマップの例を含む) |
+| `backend-beginner` | バックエンド開発の学習ロードマップ |
+| `devops` | DevOps/インフラエンジニアリングのロードマップ |
 
 生成されるディレクトリ構造:
 

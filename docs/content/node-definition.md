@@ -4,12 +4,35 @@
 
 ```yaml
 nodes:
-  - id: html-basics        # ノードの一意 ID (英小文字・数字・ハイフン推奨)
-    title: HTML の基礎      # サイト上に表示される名前
-    type: required         # 省略可 (省略時は required と同等)
-    children:              # インライン定義の子ノード
+  - id: html-basics            # ノードの一意 ID (英小文字・数字・ハイフン推奨)
+    title: HTML の基礎          # サイト上に表示される名前
+    type: required             # 省略可 (省略時は required と同等)
+    difficulty: beginner       # 難易度 (省略可): beginner / intermediate / advanced
+    estimatedTime: 3d          # 推定所要時間 (省略可): 自由書式 (例: "30m", "2h", "3d", "2w")
+    children:                  # インライン定義の子ノード
       - id: semantic-html
         title: セマンティック HTML
+```
+
+## difficulty (難易度)
+
+ノードの難易度を表す任意フィールドです。設定すると SVG ノードの左上にバッジが表示され、サイドパネルにも難易度ラベルが表示されます。
+
+| 値 | 表示 | 意味 |
+|---|---|---|
+| `beginner` | 初級 (緑) | 基礎的な内容 |
+| `intermediate` | 中級 (黄) | ある程度の前提知識が必要 |
+| `advanced` | 上級 (赤) | 高度な内容 |
+
+## estimatedTime (推定所要時間)
+
+学習にかかる目安時間を自由書式の文字列で記述します。サイドパネルに表示されます。省略可能です。
+
+```yaml
+estimatedTime: "30m"   # 30分
+estimatedTime: "2h"    # 2時間
+estimatedTime: "3d"    # 3日
+estimatedTime: "2w"    # 2週間
 ```
 
 ## id の命名ルール
