@@ -1,0 +1,146 @@
+site:
+  title: Backend Beginner Roadmap
+  description: バックエンド開発の基礎を身につけるためのロードマップ
+  brandColor: "#10b981"
+  author: your-name
+  license: CC-BY-4.0
+  repo: https://github.com/your-name/your-repo
+  editBranch: main
+  basePath: ""
+  siteUrl: ""
+
+roadmaps:
+  - id: backend
+    title: Backend
+    description: サーバーサイド開発ができるようになるまでの道筋
+    nodes:
+      - id: internet
+        title: インターネットの仕組み
+        type: required
+        children:
+          - id: how-internet-works
+            title: インターネットはどう動くか
+          - id: http
+            title: HTTP / HTTPS
+            type: required
+          - id: dns
+            title: DNS の仕組み
+            type: required
+          - id: hosting
+            title: ホスティングとは
+            type: optional
+
+      - id: os-basics
+        title: OS の基礎知識
+        type: required
+        parents: [internet]
+        children:
+          - id: terminal
+            title: ターミナルの基本操作
+          - id: os-process
+            title: プロセス管理
+            type: optional
+          - id: os-network
+            title: ネットワークコマンド (curl, netstat)
+            type: optional
+
+      - id: programming-language
+        title: プログラミング言語
+        type: required
+        parents: [os-basics]
+        children:
+          - id: go
+            title: Go
+            type: required
+          - id: python
+            title: Python
+            type: alternative
+          - id: nodejs
+            title: Node.js
+            type: alternative
+          - id: java
+            title: Java
+            type: alternative
+
+      - id: version-control
+        title: バージョン管理 (Git)
+        type: required
+        parents: [programming-language]
+        children:
+          - id: git-basics
+            title: コミット・ブランチ・マージ
+          - id: git-github
+            title: GitHub の使い方
+
+      - id: database
+        title: データベース
+        type: required
+        parents: [programming-language]
+        children:
+          - id: rdb
+            title: リレーショナル DB (PostgreSQL)
+            type: required
+          - id: sql-basics
+            title: SQL の基本 (SELECT / INSERT / JOIN)
+          - id: nosql
+            title: NoSQL (Redis / MongoDB)
+            type: optional
+          - id: orm
+            title: ORM の使い方
+            type: optional
+
+      - id: api-design
+        title: API 設計
+        type: required
+        parents: [database, version-control]
+        children:
+          - id: rest
+            title: REST API
+            type: required
+          - id: json
+            title: JSON とシリアライゼーション
+          - id: graphql
+            title: GraphQL
+            type: alternative
+          - id: grpc
+            title: gRPC
+            type: optional
+
+      - id: authentication
+        title: 認証・認可
+        type: required
+        parents: [api-design]
+        children:
+          - id: session
+            title: セッション / Cookie
+          - id: jwt
+            title: JWT (JSON Web Token)
+          - id: oauth
+            title: OAuth 2.0
+            type: optional
+
+      - id: testing
+        title: テスト
+        type: required
+        parents: [api-design]
+        children:
+          - id: unit-test
+            title: ユニットテスト
+          - id: integration-test
+            title: 統合テスト
+          - id: api-test
+            title: API テスト
+            type: optional
+
+      - id: deployment
+        title: デプロイ
+        type: optional
+        parents: [authentication, testing]
+        children:
+          - id: docker-basics
+            title: Docker の基本
+          - id: ci-cd
+            title: CI/CD (GitHub Actions)
+          - id: cloud
+            title: クラウド (AWS / GCP)
+            type: optional

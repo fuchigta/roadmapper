@@ -113,6 +113,17 @@ func validateNodesRec(nodes []*Node, allIDs, seen map[string]bool, prefix string
 			})
 		}
 
+		if n.Difficulty != "" {
+			switch n.Difficulty {
+			case DifficultyBeginner, DifficultyIntermediate, DifficultyAdvanced:
+			default:
+				*errs = append(*errs, ValidationError{
+					p + ".difficulty",
+					fmt.Sprintf("不正な difficulty %q (beginner/intermediate/advanced のいずれかを指定)", n.Difficulty),
+				})
+			}
+		}
+
 		validateNodesRec(n.Children, allIDs, seen, p+".children", errs)
 	}
 }

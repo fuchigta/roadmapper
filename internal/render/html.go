@@ -14,11 +14,13 @@ import (
 
 // NodeMeta はフロントエンドに渡すノードのメタデータ。
 type NodeMeta struct {
-	Title    string        `json:"title"`
-	HTML     string        `json:"html"`
-	Links    []config.Link `json:"links,omitempty"`
-	Parents  []string      `json:"parents,omitempty"`
-	Children []string      `json:"children,omitempty"`
+	Title         string        `json:"title"`
+	HTML          string        `json:"html"`
+	Links         []config.Link `json:"links,omitempty"`
+	Parents       []string      `json:"parents,omitempty"`
+	Children      []string      `json:"children,omitempty"`
+	Difficulty    string        `json:"difficulty,omitempty"`
+	EstimatedTime string        `json:"estimatedTime,omitempty"`
 }
 
 // RenderRoadmapPage は roadmap.html を使ってロードマップページの HTML を生成する。
@@ -143,11 +145,13 @@ func buildNodeMeta(g *graph.Graph, nodeHTML map[string]string) (map[string]NodeM
 			childIDs[j] = c.ID
 		}
 		meta[n.ID] = NodeMeta{
-			Title:    n.Title,
-			HTML:     nodeHTML[n.ID],
-			Links:    n.Node.Links,
-			Parents:  parentIDs,
-			Children: childIDs,
+			Title:         n.Title,
+			HTML:          nodeHTML[n.ID],
+			Links:         n.Node.Links,
+			Parents:       parentIDs,
+			Children:      childIDs,
+			Difficulty:    string(n.Node.Difficulty),
+			EstimatedTime: n.Node.EstimatedTime,
 		}
 		order[i] = n.ID
 	}

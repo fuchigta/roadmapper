@@ -13,6 +13,8 @@ import (
 	"github.com/fuchigta/roadmapper/internal/templates"
 )
 
+const availableTemplates = "minimal | frontend-beginner | backend-beginner | devops | blank"
+
 func NewInitCmd() *cobra.Command {
 	var templateName string
 
@@ -30,7 +32,7 @@ func NewInitCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&templateName, "template", "t", "minimal",
-		"使用するテンプレート (minimal | frontend-beginner)")
+		"使用するテンプレート ("+availableTemplates+")")
 
 	return cmd
 }
@@ -40,7 +42,7 @@ func runInit(dir, templateName string) error {
 
 	// テンプレートが存在するか確認
 	if _, err := templates.FS.Open(srcDir); err != nil {
-		return fmt.Errorf("テンプレート %q が見つかりません (minimal | frontend-beginner)", templateName)
+		return fmt.Errorf("テンプレート %q が見つかりません (%s)", templateName, availableTemplates)
 	}
 
 	// 出力先ディレクトリを作成

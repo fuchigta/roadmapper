@@ -166,6 +166,26 @@ func renderNode(sb *strings.Builder, n *graph.Node, lr *layout.Result) {
 			x+nl.Width-16, y+8, badge)
 	}
 
+	// difficulty バッジ (左上)
+	if n.Node.Difficulty != "" {
+		var diffLabel, diffColor string
+		switch n.Node.Difficulty {
+		case config.DifficultyBeginner:
+			diffLabel, diffColor = "初", "#22c55e"
+		case config.DifficultyIntermediate:
+			diffLabel, diffColor = "中", "#f59e0b"
+		case config.DifficultyAdvanced:
+			diffLabel, diffColor = "上", "#ef4444"
+		}
+		fmt.Fprintf(sb,
+			`<rect x="%v" y="%v" width="18" height="14" rx="7" fill="%s" opacity="0.9"/>`,
+			x+2, y+1, diffColor)
+		fmt.Fprintf(sb,
+			`<text x="%v" y="%v" text-anchor="middle" dominant-baseline="middle" `+
+				`font-family="system-ui,sans-serif" font-size="8" fill="white">%s</text>`,
+			x+11, y+8, diffLabel)
+	}
+
 	sb.WriteString(`</g>`)
 }
 

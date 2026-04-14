@@ -234,6 +234,25 @@ function openPanel(nodeId) {
 
   document.getElementById('panel-title').textContent = data.title;
 
+  // メタデータ (難易度・所要時間)
+  const metaEl = document.getElementById('panel-meta');
+  const diffEl = document.getElementById('panel-difficulty');
+  const timeEl = document.getElementById('panel-time');
+  if (metaEl) {
+    const diffLabels = { beginner: '初級', intermediate: '中級', advanced: '上級' };
+    const hasMeta = data.difficulty || data.estimatedTime;
+    metaEl.hidden = !hasMeta;
+    if (diffEl) {
+      diffEl.hidden = !data.difficulty;
+      diffEl.textContent = diffLabels[data.difficulty] || data.difficulty || '';
+      diffEl.dataset.level = data.difficulty || '';
+    }
+    if (timeEl) {
+      timeEl.hidden = !data.estimatedTime;
+      timeEl.textContent = data.estimatedTime ? '\u23f1 ' + data.estimatedTime : '';
+    }
+  }
+
   const sel = document.getElementById('node-state');
   if (sel) sel.value = getNodeState(nodeId).state;
 

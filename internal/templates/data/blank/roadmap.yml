@@ -1,0 +1,19 @@
+site:
+  title: My Roadmap
+  description: ここにロードマップの説明を書いてください
+  brandColor: "#4f46e5"
+  author: your-name
+  license: CC-BY-4.0
+  repo: ""
+  editBranch: main
+  basePath: ""
+  siteUrl: ""
+
+roadmaps:
+  - id: roadmap
+    title: ロードマップ
+    description: ここにロードマップの説明を書いてください
+    nodes:
+      - id: start
+        title: はじめに
+        type: required

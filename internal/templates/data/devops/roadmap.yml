@@ -1,0 +1,141 @@
+site:
+  title: DevOps Roadmap
+  description: DevOps エンジニアになるためのロードマップ
+  brandColor: "#f59e0b"
+  author: your-name
+  license: CC-BY-4.0
+  repo: https://github.com/your-name/your-repo
+  editBranch: main
+  basePath: ""
+  siteUrl: ""
+
+roadmaps:
+  - id: devops
+    title: DevOps
+    description: インフラ構築から運用自動化までの道筋
+    nodes:
+      - id: linux
+        title: Linux の基礎
+        type: required
+        children:
+          - id: linux-commands
+            title: 基本コマンド (ls, grep, awk, sed)
+          - id: linux-permissions
+            title: ファイルシステムと権限
+          - id: linux-shell
+            title: シェルスクリプト
+            type: optional
+          - id: linux-systemd
+            title: systemd / サービス管理
+            type: optional
+
+      - id: networking
+        title: ネットワーク
+        type: required
+        parents: [linux]
+        children:
+          - id: tcp-ip
+            title: TCP/IP モデル
+          - id: dns
+            title: DNS
+          - id: firewall
+            title: ファイアウォール / セキュリティグループ
+          - id: load-balancer
+            title: ロードバランサー
+            type: optional
+
+      - id: version-control
+        title: バージョン管理 (Git)
+        type: required
+        parents: [linux]
+        children:
+          - id: git-basics
+            title: コミット・ブランチ・マージ
+          - id: git-workflow
+            title: Git Flow / GitHub Flow
+          - id: git-hooks
+            title: Git Hooks / pre-commit
+            type: optional
+
+      - id: ci-cd
+        title: CI/CD
+        type: required
+        parents: [version-control]
+        children:
+          - id: github-actions
+            title: GitHub Actions
+            type: required
+          - id: gitlab-ci
+            title: GitLab CI
+            type: alternative
+          - id: jenkins
+            title: Jenkins
+            type: alternative
+          - id: pipeline-design
+            title: パイプライン設計
+            type: optional
+
+      - id: containers
+        title: コンテナ
+        type: required
+        parents: [ci-cd, networking]
+        children:
+          - id: docker
+            title: Docker
+            type: required
+          - id: dockerfile
+            title: Dockerfile の書き方
+          - id: docker-compose
+            title: Docker Compose
+          - id: container-registry
+            title: コンテナレジストリ
+            type: optional
+
+      - id: orchestration
+        title: オーケストレーション
+        type: required
+        parents: [containers]
+        children:
+          - id: kubernetes
+            title: Kubernetes
+            type: required
+          - id: k8s-objects
+            title: Pod / Deployment / Service
+          - id: helm
+            title: Helm Charts
+            type: optional
+          - id: ecs
+            title: AWS ECS
+            type: alternative
+
+      - id: iac
+        title: Infrastructure as Code
+        type: required
+        parents: [orchestration]
+        children:
+          - id: terraform
+            title: Terraform
+            type: required
+          - id: cloudformation
+            title: AWS CloudFormation
+            type: alternative
+          - id: pulumi
+            title: Pulumi
+            type: alternative
+
+      - id: monitoring
+        title: モニタリング・ログ管理
+        type: optional
+        parents: [orchestration]
+        children:
+          - id: prometheus
+            title: Prometheus / Grafana
+            type: required
+          - id: logging
+            title: ログ集約 (Fluentd / Loki)
+          - id: alerting
+            title: アラート設計
+            type: optional
+          - id: tracing
+            title: 分散トレーシング (Jaeger)
+            type: optional

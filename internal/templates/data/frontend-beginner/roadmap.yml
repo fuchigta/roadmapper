@@ -17,6 +17,8 @@ roadmaps:
       - id: internet
         title: インターネットの仕組み
         type: required
+        difficulty: beginner
+        estimatedTime: 1d
         children:
           - id: how-internet-works
             title: インターネットはどう動くか
@@ -33,6 +35,8 @@ roadmaps:
       - id: html
         title: HTML
         type: required
+        difficulty: beginner
+        estimatedTime: 3d
         parents: [internet]
         children:
           - id: html-basics
@@ -64,6 +68,8 @@ roadmaps:
       - id: javascript
         title: JavaScript
         type: required
+        difficulty: intermediate
+        estimatedTime: 2w
         parents: [html]
         children:
           - id: js-basics
@@ -101,6 +107,8 @@ roadmaps:
       - id: framework
         title: フロントエンドフレームワーク
         type: required
+        difficulty: advanced
+        estimatedTime: 2w
         parents: [version-control, package-manager]
         children:
           - id: react
