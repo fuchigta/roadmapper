@@ -32,12 +32,20 @@ function setNodeState(nodeId, patch) {
 }
 
 // ===== Progress calculation =====
+// required ノードのみを進捗の分母とする。optional / alternative は対象外。
+function isRequiredNode(id) {
+  const t = nodeData[id]?.type;
+  return t !== 'optional' && t !== 'alternative';
+}
+
 function calcRoadmapProgress(rmId) {
   const rm = progress[rmId] || {};
-  const nodeIds = (window.ROADMAP_NODE_IDS?.[rmId]) || Object.keys(nodeData);
-  if (!nodeIds.length) return 0;
-  const done = nodeIds.filter(id => rm[id]?.state === 'done').length;
-  return Math.round((done / nodeIds.length) * 100);
+  // インデックスページは ROADMAP_NODE_IDS（Go 側で required のみ）を使用。
+  // ロードマップページは nodeData から required ノードのみ抽出。
+  const allIds = (window.ROADMAP_NODE_IDS?.[rmId]) || Object.keys(nodeData).filter(isRequiredNode);
+  if (!allIds.length) return 0;
+  const done = allIds.filter(id => rm[id]?.state === 'done').length;
+  return Math.round((done / allIds.length) * 100);
 }
 
 function updateProgressBar() {

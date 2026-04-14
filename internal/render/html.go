@@ -16,6 +16,7 @@ import (
 type NodeMeta struct {
 	Title         string        `json:"title"`
 	HTML          string        `json:"html"`
+	Type          string        `json:"type,omitempty"`
 	Links         []config.Link `json:"links,omitempty"`
 	Parents       []string      `json:"parents,omitempty"`
 	Children      []string      `json:"children,omitempty"`
@@ -121,11 +122,15 @@ func RenderIndexPage(
 	return renderTemplate(webFS, "templates/index.html", tmplData)
 }
 
-// graphNodeOrder は g.Nodes の DAG 順序でノード ID スライスを返す。
+// graphNodeOrder は g.Nodes の DAG 順序で required ノードの ID スライスを返す。
+// optional / alternative ノードは進捗の分母に含めないためここで除外する。
 func graphNodeOrder(g *graph.Graph) []string {
-	order := make([]string, len(g.Nodes))
-	for i, n := range g.Nodes {
-		order[i] = n.ID
+	order := make([]string, 0, len(g.Nodes))
+	for _, n := range g.Nodes {
+		if n.Node.Type == config.NodeTypeOptional || n.Node.Type == config.NodeTypeAlternative {
+			continue
+		}
+		order = append(order, n.ID)
 	}
 	return order
 }
@@ -147,6 +152,7 @@ func buildNodeMeta(g *graph.Graph, nodeHTML map[string]string) (map[string]NodeM
 		meta[n.ID] = NodeMeta{
 			Title:         n.Title,
 			HTML:          nodeHTML[n.ID],
+			Type:          string(n.Node.Type),
 			Links:         n.Node.Links,
 			Parents:       parentIDs,
 			Children:      childIDs,
