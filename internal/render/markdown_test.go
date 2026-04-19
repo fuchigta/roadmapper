@@ -77,3 +77,59 @@ func TestRenderMarkdown_hasMermaid(t *testing.T) {
 		t.Error("expected HasMermaid=false for non-mermaid content")
 	}
 }
+
+func TestExtractPlainText(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		wants []string // 含まれるべき文字列
+		nots  []string // 含まれてはいけない文字列
+	}{
+		{
+			name:  "見出しと段落",
+			input: "## はじめに\n\nこれはテスト本文です。\n",
+			wants: []string{"はじめに", "テスト本文"},
+			nots:  []string{"<h2", "##"},
+		},
+		{
+			name:  "コードフェンス",
+			input: "```go\nfmt.Println(\"hello\")\n```\n",
+			wants: []string{"fmt.Println"},
+			nots:  []string{"```", "<pre", "<code"},
+		},
+		{
+			name:  "リストと太字",
+			input: "- **重要**: 項目A\n- 項目B\n",
+			wants: []string{"重要", "項目A", "項目B"},
+			nots:  []string{"**", "<li", "<strong"},
+		},
+		{
+			name:  "HTML タグは含まない",
+			input: "普通の段落。\n\n<div>インライン HTML</div>\n",
+			wants: []string{"普通の段落"},
+			nots:  []string{"<div>"},
+		},
+		{
+			name:  "空文字",
+			input: "",
+			wants: []string{},
+			nots:  []string{"<"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := render.ExtractPlainText(tt.input)
+			for _, w := range tt.wants {
+				if !strings.Contains(got, w) {
+					t.Errorf("want %q in output, got: %q", w, got)
+				}
+			}
+			for _, n := range tt.nots {
+				if strings.Contains(got, n) {
+					t.Errorf("must not contain %q in output, got: %q", n, got)
+				}
+			}
+		})
+	}
+}

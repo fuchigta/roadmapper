@@ -9,9 +9,11 @@ import (
 	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
+	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	goldmarkHTML "github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/text"
 )
 
 // checkboxDisabledRe は goldmark が出力する input タグ内の disabled="" 属性にマッチする。
@@ -115,4 +117,43 @@ var mermaidRe = regexp.MustCompile(`<pre class="mermaid">`)
 // HasMermaid は html 文字列に mermaid ブロックが含まれるか返す。
 func HasMermaid(html string) bool {
 	return mermaidRe.MatchString(html)
+}
+
+// ExtractPlainText は Markdown ソースからプレーンテキストを抽出する。
+// 見出し・本文・リスト・コードブロック内容を空白区切りで返す。
+// 全文検索インデックス用。HTML タグやエンティティは出現しない。
+func ExtractPlainText(src string) string {
+	source := []byte(src)
+	reader := text.NewReader(source)
+	doc := md.Parser().Parse(reader)
+
+	var sb strings.Builder
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		switch v := n.(type) {
+		case *ast.Text:
+			sb.Write(v.Segment.Value(source))
+			sb.WriteByte(' ')
+		case *ast.CodeBlock:
+			for i := 0; i < v.Lines().Len(); i++ {
+				seg := v.Lines().At(i)
+				sb.Write(seg.Value(source))
+				sb.WriteByte(' ')
+			}
+		case *ast.FencedCodeBlock:
+			for i := 0; i < v.Lines().Len(); i++ {
+				seg := v.Lines().At(i)
+				sb.Write(seg.Value(source))
+				sb.WriteByte(' ')
+			}
+		case *ast.AutoLink:
+			sb.Write(v.Label(source))
+			sb.WriteByte(' ')
+		}
+		return ast.WalkContinue, nil
+	})
+
+	return strings.Join(strings.Fields(sb.String()), " ")
 }

@@ -234,6 +234,21 @@ a { color: var(--brand); }
   background: var(--brand-light);
   color: var(--brand);
 }
+.search-results li .sr-snippet {
+  font-size: .8rem;
+  color: var(--text-muted, #64748b);
+  margin-top: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.search-results mark {
+  background: color-mix(in srgb, var(--brand) 25%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 2px;
+  font-style: normal;
+}
 .search-highlight {
   outline: 3px solid var(--brand);
   outline-offset: 2px;

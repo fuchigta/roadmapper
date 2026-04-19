@@ -16,6 +16,7 @@ import (
 type NodeMeta struct {
 	Title         string        `json:"title"`
 	HTML          string        `json:"html"`
+	Text          string        `json:"text,omitempty"`
 	Type          string        `json:"type,omitempty"`
 	Links         []config.Link `json:"links,omitempty"`
 	Parents       []string      `json:"parents,omitempty"`
@@ -32,13 +33,14 @@ func RenderRoadmapPage(
 	g *graph.Graph,
 	lr *layout.Result,
 	nodeHTML map[string]string, // nodeID → rendered HTML
+	nodeText map[string]string, // nodeID → plaintext (全文検索用)
 	basePath string,
 	assetBase string, // CSS/JS への相対パス (basePath 空なら "../")
 	hasMermaid bool, // mermaid コードブロックがあれば mermaid.js を読み込む
 ) (string, error) {
 	colors := DeriveColors(cfg.Site.BrandColor)
 
-	nodeMeta, nodeOrder := buildNodeMeta(g, nodeHTML)
+	nodeMeta, nodeOrder := buildNodeMeta(g, nodeHTML, nodeText)
 	nodeDataJSON, err := json.Marshal(nodeMeta)
 	if err != nil {
 		return "", err
@@ -136,8 +138,8 @@ func graphNodeOrder(g *graph.Graph) []string {
 }
 
 // buildNodeMeta は g.Nodes を1パスでメタデータマップと DAG 順序スライスを返す。
-// nodeHTML が nil の場合は HTML フィールドを空にする。
-func buildNodeMeta(g *graph.Graph, nodeHTML map[string]string) (map[string]NodeMeta, []string) {
+// nodeHTML / nodeText が nil の場合は対応フィールドを空にする。
+func buildNodeMeta(g *graph.Graph, nodeHTML, nodeText map[string]string) (map[string]NodeMeta, []string) {
 	meta := make(map[string]NodeMeta, len(g.Nodes))
 	order := make([]string, len(g.Nodes))
 	for i, n := range g.Nodes {
@@ -152,6 +154,7 @@ func buildNodeMeta(g *graph.Graph, nodeHTML map[string]string) (map[string]NodeM
 		meta[n.ID] = NodeMeta{
 			Title:         n.Title,
 			HTML:          nodeHTML[n.ID],
+			Text:          nodeText[n.ID],
 			Type:          string(n.Node.Type),
 			Links:         n.Node.Links,
 			Parents:       parentIDs,

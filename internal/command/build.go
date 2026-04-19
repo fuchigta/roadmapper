@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -91,8 +92,8 @@ func runBuild(configPath, outDir, basePath string) error {
 			return fmt.Errorf("ロードマップ %q のレイアウト計算に失敗: %w", rm.ID, err)
 		}
 
-		// ノード本文を Markdown → HTML に変換
-		nodeHTML, hasMermaid, err := buildNodeHTML(g, docs)
+		// ノード本文を Markdown → HTML / plaintext に変換
+		nodeHTML, nodeText, hasMermaid, err := buildNodeHTML(g, docs)
 		if err != nil {
 			return err
 		}
@@ -110,7 +111,7 @@ func runBuild(configPath, outDir, basePath string) error {
 		}
 
 		pageHTML, err := render.RenderRoadmapPage(
-			web.FS, cfg, rm, g, lr, nodeHTML, basePath, assetBase, hasMermaid,
+			web.FS, cfg, rm, g, lr, nodeHTML, nodeText, basePath, assetBase, hasMermaid,
 		)
 		if err != nil {
 			return fmt.Errorf("ロードマップページの生成に失敗: %w", err)
@@ -154,21 +155,23 @@ func runBuild(configPath, outDir, basePath string) error {
 	return nil
 }
 
-// buildNodeHTML は各ノードの Markdown を HTML に変換して map と mermaid 有無を返す。
-func buildNodeHTML(g *graph.Graph, docs map[string]*content.Doc) (map[string]string, bool, error) {
+// buildNodeHTML は各ノードの Markdown を HTML / plaintext に変換して map 2 つと mermaid 有無を返す。
+func buildNodeHTML(g *graph.Graph, docs map[string]*content.Doc) (map[string]string, map[string]string, bool, error) {
 	nodeHTML := map[string]string{}
+	nodeText := map[string]string{}
 	hasMermaid := false
 
 	for _, n := range g.Nodes {
 		doc, ok := docs[n.ID]
 		if !ok {
 			nodeHTML[n.ID] = ""
+			nodeText[n.ID] = ""
 			continue
 		}
 
 		html, err := render.RenderMarkdown(doc.Body)
 		if err != nil {
-			return nil, false, fmt.Errorf("ノード %q の Markdown 変換に失敗: %w", n.ID, err)
+			return nil, nil, false, fmt.Errorf("ノード %q の Markdown 変換に失敗: %w", n.ID, err)
 		}
 
 		// links が content frontmatter にあれば config.Node の Links に追加 (content 優先)
@@ -190,9 +193,24 @@ func buildNodeHTML(g *graph.Graph, docs map[string]*content.Doc) (map[string]str
 		}
 
 		nodeHTML[n.ID] = html
+
+		// 全文検索用 plaintext: 本文テキスト + リンクタイトル
+		plainBody := render.ExtractPlainText(doc.Body)
+		linkTitles := make([]string, 0, len(n.Node.Links))
+		for _, l := range n.Node.Links {
+			if l.Title != "" {
+				linkTitles = append(linkTitles, l.Title)
+			}
+		}
+		linkText := strings.Join(linkTitles, " ")
+		if linkText != "" {
+			nodeText[n.ID] = strings.TrimSpace(plainBody + " " + linkText)
+		} else {
+			nodeText[n.ID] = plainBody
+		}
 	}
 
-	return nodeHTML, hasMermaid, nil
+	return nodeHTML, nodeText, hasMermaid, nil
 }
 
 func copyStaticAssets(outDir string) error {

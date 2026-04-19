@@ -320,42 +320,93 @@ function restoreChecklists(nodeId, container) {
   });
 }
 
-// ===== ノード検索 =====
+// ===== ノード全文検索 =====
+function appendWithMark(parent, text, lowerText, q) {
+  let i = 0;
+  while (true) {
+    const hit = lowerText.indexOf(q, i);
+    if (hit < 0) { parent.appendChild(document.createTextNode(text.slice(i))); return; }
+    parent.appendChild(document.createTextNode(text.slice(i, hit)));
+    const m = document.createElement('mark');
+    m.textContent = text.slice(hit, hit + q.length);
+    parent.appendChild(m);
+    i = hit + q.length;
+  }
+}
+
 function initSearch() {
   const input = document.getElementById('node-search');
   const results = document.getElementById('search-results');
   if (!input || !results) return;
 
-  const allNodes = Object.entries(nodeData).map(([id, d]) => ({ id, title: d.title }));
+  const idx = Object.entries(nodeData)
+    .filter(([id]) => id !== '__order')
+    .map(([id, d]) => ({
+      id,
+      title: d.title,
+      titleLower: d.title.toLowerCase(),
+      text: d.text || '',
+      textLower: (d.text || '').toLowerCase(),
+    }));
+
+  let lastMatches = [];
   let selectedIdx = -1;
 
   function showResults(query) {
     results.innerHTML = '';
     selectedIdx = -1;
-    if (!query) { results.hidden = true; return; }
+    lastMatches = [];
+    const q = query.trim().toLowerCase();
+    if (!q) { results.hidden = true; return; }
 
-    const q = query.toLowerCase();
-    const matched = allNodes.filter(n => n.title.toLowerCase().includes(q));
+    const matched = [];
+    for (const entry of idx) {
+      const tIdx = entry.titleLower.indexOf(q);
+      const bIdx = entry.textLower.indexOf(q);
+      if (tIdx < 0 && bIdx < 0) continue;
+      const score = tIdx >= 0 ? (tIdx === 0 ? 0 : 1) : 2;
+      matched.push({ entry, score, tIdx, bIdx });
+    }
     if (!matched.length) { results.hidden = true; return; }
 
-    matched.slice(0, 8).forEach((n, i) => {
+    matched.sort((a, b) => a.score - b.score);
+    lastMatches = matched.slice(0, 12);
+
+    for (const { entry, tIdx, bIdx } of lastMatches) {
       const li = document.createElement('li');
-      li.textContent = n.title;
-      li.dataset.idx = i;
+      li.dataset.id = entry.id;
+
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'sr-title';
+      appendWithMark(titleDiv, entry.title, entry.titleLower, q);
+      li.appendChild(titleDiv);
+
+      if (bIdx >= 0) {
+        const start = Math.max(0, bIdx - 30);
+        const end = Math.min(entry.text.length, bIdx + q.length + 50);
+        const snippet = (start > 0 ? '…' : '') + entry.text.slice(start, end) + (end < entry.text.length ? '…' : '');
+        const snippetLower = snippet.toLowerCase();
+        const snippetDiv = document.createElement('div');
+        snippetDiv.className = 'sr-snippet';
+        appendWithMark(snippetDiv, snippet, snippetLower, q);
+        li.appendChild(snippetDiv);
+      }
+
       li.addEventListener('mousedown', (e) => {
         e.preventDefault();
-        selectResult(n.id);
+        selectResult(entry.id);
       });
       results.appendChild(li);
-    });
+    }
     results.hidden = false;
   }
 
   function selectResult(nodeId) {
     input.value = '';
     results.hidden = true;
+    selectedIdx = -1;
+    lastMatches = [];
 
-    // SVG ノードへスクロール
     const el = document.querySelector(`.roadmap-node[data-id="${nodeId}"]`);
     if (el) {
       el.classList.add('search-highlight');
@@ -379,10 +430,8 @@ function initSearch() {
       selectedIdx = Math.max(selectedIdx - 1, 0);
     } else if (e.key === 'Enter' && selectedIdx >= 0) {
       e.preventDefault();
-      const nodeId = Object.keys(nodeData).filter(id =>
-        nodeData[id].title.toLowerCase().includes(input.value.toLowerCase())
-      )[selectedIdx];
-      if (nodeId) selectResult(nodeId);
+      const id = items[selectedIdx]?.dataset.id;
+      if (id) selectResult(id);
       return;
     } else if (e.key === 'Escape') {
       results.hidden = true;
@@ -655,38 +704,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.dataset.theme = next;
     localStorage.setItem('roadmapper:theme', next);
     updateThemeIcon(next);
-  });
-
-  // エクスポート
-  document.getElementById('export-btn')?.addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(progress, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'roadmapper-progress.json';
-    a.click();
-  });
-
-  // インポート
-  const importBtn = document.getElementById('import-btn');
-  const importFile = document.getElementById('import-file');
-  importBtn?.addEventListener('click', () => importFile?.click());
-  importFile?.addEventListener('change', e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = evt => {
-      try {
-        const imported = JSON.parse(evt.target.result);
-        progress = { ...progress, ...imported };
-        saveProgress(progress);
-        updateProgressBar();
-        updateNodeVisuals();
-      } catch {
-        alert('ファイルの読み込みに失敗しました');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
   });
 
   // 各機能の初期化
