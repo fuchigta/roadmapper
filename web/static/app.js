@@ -41,11 +41,14 @@ function isRequiredNode(id) {
 function calcRoadmapProgress(rmId) {
   const rm = progress[rmId] || {};
   // インデックスページは ROADMAP_NODE_IDS（Go 側で required のみ）を使用。
-  // ロードマップページは nodeData から required ノードのみ抽出。
-  const allIds = (window.ROADMAP_NODE_IDS?.[rmId]) || Object.keys(nodeData).filter(isRequiredNode);
-  if (!allIds.length) return 0;
-  const done = allIds.filter(id => rm[id]?.state === 'done').length;
-  return Math.round((done / allIds.length) * 100);
+  // ロードマップページは nodeData.__order (全ノードの DAG 順) から required のみ抽出。
+  // Object.keys(nodeData) は予約済みキー __order を含むため直接使わない。
+  const ids = (window.ROADMAP_NODE_IDS?.[rmId])
+    || (nodeData.__order || Object.keys(nodeData).filter(k => k !== '__order'))
+         .filter(isRequiredNode);
+  if (!ids.length) return 0;
+  const done = ids.filter(id => rm[id]?.state === 'done').length;
+  return Math.round((done / ids.length) * 100);
 }
 
 function updateProgressBar() {
