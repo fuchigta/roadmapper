@@ -101,17 +101,20 @@ git tag -d vX.Y.Z
 1. run ID を取得:
    ```bash
    RELEASE_RUN=$(bash "${CLAUDE_SKILL_DIR}/scripts/wait-for-run.sh" release.yml "" 30)
+   TEST_RUN=$(bash "${CLAUDE_SKILL_DIR}/scripts/wait-for-run.sh" test.yml "" 30)
    PAGES_RUN=$(bash "${CLAUDE_SKILL_DIR}/scripts/wait-for-run.sh" pages.yml "" 30)
    ```
-   - `pages.yml` は master push でトリガーされるため、0-4 の push 後に発生する
+   - `release.yml` と `test.yml` はタグ push でトリガーされる
+   - `pages.yml` は 0-4 の master push でトリガーされる
    - いずれかが exit 1 (タイムアウト) なら中断してユーザーにエスカレート
 
-2. **両方を並列で監視**:
+2. **3 つを並列で監視**:
    ```bash
    gh run watch "$RELEASE_RUN" --exit-status
+   gh run watch "$TEST_RUN" --exit-status
    gh run watch "$PAGES_RUN" --exit-status
    ```
-3. 両方成功 → Phase 5 へ
+3. すべて成功 → Phase 5 へ
 4. いずれかが失敗 → Phase 4 へ
 
 ---
@@ -129,8 +132,8 @@ git tag -d vX.Y.Z
 2. 失敗原因を要約してユーザーに表示する
 3. 修正方針を判断:
    - GoReleaser ビルドエラー → `.goreleaser.yml` や Go コードを修正
-   - テスト失敗 → 該当テストを修正
-   - Pages ビルドエラー → `docs/roadmap.yml` 等を確認
+   - `test.yml` 失敗 → `go test -race ./...` のエラーを修正
+   - `pages.yml` ビルドエラー → `docs/roadmap.yml` 等を確認
 4. 修正をコミット (Phase 0 の 0-3 と同じ規則: 変更から推測した conventional commit)
 5. master に push:
    ```bash
