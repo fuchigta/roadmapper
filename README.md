@@ -209,6 +209,68 @@ roadmapper deploy --target github
 | ノードをクリック | サイドパネルを開く |
 | チェックリストを操作 | 状態を自動更新 (未着手→学習中→完了) |
 
+## 進捗のバックエンド同期
+
+`progressSync` を設定すると、複数デバイス間で進捗を同期できます。
+
+```yaml
+site:
+  progressSync:
+    enabled: true
+    endpoint: https://api.example.com/sync  # サイト作者が用意するサーバ
+```
+
+### HTTP コントラクト
+
+| メソッド | パス | 概要 |
+|---|---|---|
+| `GET` | `{endpoint}/{deviceId}/{roadmapId}` | ロードマップ進捗を取得 |
+| `PUT` | `{endpoint}/{deviceId}/{roadmapId}` | ロードマップ進捗を保存 |
+
+- `deviceId` はブラウザ初回アクセス時に `crypto.randomUUID()` で自動生成
+- PUT ボディ: `{ "<nodeId>": { "state": "done", "tasks": [true, false] }, ... }`
+- サーバは冪等な全置換で実装すればよい
+
+### CORS 設定 (必須)
+
+PUT に `Content-Type: application/json` を付けるため、サーバは preflight (OPTIONS) に応答する必要があります:
+
+```
+Access-Control-Allow-Origin: https://your-site.example.com
+Access-Control-Allow-Methods: GET, PUT, OPTIONS
+Access-Control-Allow-Headers: Content-Type
+```
+
+### 最小サーバ実装例 (Cloudflare Workers)
+
+```js
+export default {
+  async fetch(req) {
+    const cors = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
+    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+    const [, deviceId, roadmapId] = new URL(req.url).pathname.split('/');
+    const key = `${deviceId}/${roadmapId}`;
+    if (req.method === 'GET') {
+      const val = await MY_KV.get(key);
+      return val
+        ? new Response(val, { headers: { ...cors, 'Content-Type': 'application/json' } })
+        : new Response('{}', { status: 404, headers: cors });
+    }
+    if (req.method === 'PUT') {
+      await MY_KV.put(key, await req.text());
+      return new Response(null, { status: 204, headers: cors });
+    }
+    return new Response('Method Not Allowed', { status: 405 });
+  }
+};
+```
+
+`MY_KV` は Cloudflare Workers KV バインディングです。認証はリバースプロキシや Cloudflare Access で付与してください。
+
 ## ライセンス
 
 [Apache License 2.0](LICENSE)

@@ -116,6 +116,15 @@ web/                            # ビルド時埋め込みアセット
 - 構造: `{ [roadmapId]: { [nodeId]: { state, tasks[] } } }`
 - `state`: `none` / `in-progress` / `done` / `skipped`
 
+### 進捗バックエンド同期 (`progressSync`)
+- `roadmap.yml` の `site.progressSync.enabled: true` + `endpoint: <BASE_URL>` で有効化
+- デバイス匿名 UUID を `roadmapper:deviceId` キーで localStorage に保存
+- `GET {endpoint}/{deviceId}/{roadmapId}` で起動時にリモート進捗を取得し、ローカルとマージ
+- `PUT {endpoint}/{deviceId}/{roadmapId}` で状態変更 800ms 後にデバウンス送信
+- マージ規則: ノードごとに「進んでいる方」を採用。`STATE_RANK`: none(0) < in-progress(1) < skipped/done(2)、同ランクは done 優先
+- オフライン時は `roadmapper:sync-dirty:{roadmapId}` フラグを立て、`online` イベントまたは次回ロード時に再送
+- シェアビュー (`?p=...`) では同期を行わない
+
 ## 禁止事項
 
 - **外部バイナリ依存の追加禁止** — Node.js, graphviz, Python, etc. はインストール不要のまま保つ

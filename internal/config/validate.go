@@ -59,6 +59,15 @@ func Validate(cfg *Config) error {
 		validateNodes(rm.Nodes, nodeIDs, prefix+".nodes", &errs)
 	}
 
+	ps := cfg.Site.ProgressSync
+	if ps.Enabled {
+		if ps.Endpoint == "" {
+			errs = append(errs, ValidationError{"site.progressSync.endpoint", "progressSync.endpoint が必要です"})
+		} else if !strings.HasPrefix(ps.Endpoint, "http://") && !strings.HasPrefix(ps.Endpoint, "https://") {
+			errs = append(errs, ValidationError{"site.progressSync.endpoint", "endpoint は http:// または https:// で始まる必要があります"})
+		}
+	}
+
 	if len(errs) > 0 {
 		return errs
 	}

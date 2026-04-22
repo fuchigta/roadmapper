@@ -115,6 +115,55 @@ func TestValidate_invalidDifficulty(t *testing.T) {
 	}
 }
 
+func TestValidate_validProgressSync(t *testing.T) {
+	cfg := &config.Config{
+		Site: config.Site{
+			Title:        "Test",
+			ProgressSync: config.ProgressSync{Enabled: true, Endpoint: "https://api.example.com/sync"},
+		},
+		Roadmaps: []config.Roadmap{{ID: "r1", Title: "R1", Nodes: []*config.Node{{ID: "a", Title: "A", Type: config.NodeTypeRequired}}}},
+	}
+	if err := config.Validate(cfg); err != nil {
+		t.Fatalf("valid progressSync should not error: %v", err)
+	}
+}
+
+func TestValidate_emptyProgressSync(t *testing.T) {
+	cfg := &config.Config{
+		Site:     config.Site{Title: "Test"},
+		Roadmaps: []config.Roadmap{{ID: "r1", Title: "R1", Nodes: []*config.Node{{ID: "a", Title: "A", Type: config.NodeTypeRequired}}}},
+	}
+	if err := config.Validate(cfg); err != nil {
+		t.Fatalf("disabled progressSync with empty endpoint should not error: %v", err)
+	}
+}
+
+func TestValidate_invalidProgressSyncMissingEndpoint(t *testing.T) {
+	cfg := &config.Config{
+		Site: config.Site{
+			Title:        "Test",
+			ProgressSync: config.ProgressSync{Enabled: true, Endpoint: ""},
+		},
+		Roadmaps: []config.Roadmap{{ID: "r1", Title: "R1", Nodes: []*config.Node{{ID: "a", Title: "A", Type: config.NodeTypeRequired}}}},
+	}
+	if err := config.Validate(cfg); err == nil {
+		t.Fatal("expected error for missing endpoint when enabled")
+	}
+}
+
+func TestValidate_invalidProgressSyncBadScheme(t *testing.T) {
+	cfg := &config.Config{
+		Site: config.Site{
+			Title:        "Test",
+			ProgressSync: config.ProgressSync{Enabled: true, Endpoint: "ftp://example.com/sync"},
+		},
+		Roadmaps: []config.Roadmap{{ID: "r1", Title: "R1", Nodes: []*config.Node{{ID: "a", Title: "A", Type: config.NodeTypeRequired}}}},
+	}
+	if err := config.Validate(cfg); err == nil {
+		t.Fatal("expected error for invalid scheme")
+	}
+}
+
 func TestValidate_unknownParent(t *testing.T) {
 	cfg := &config.Config{
 		Site: config.Site{Title: "Test"},

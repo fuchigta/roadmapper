@@ -2,16 +2,17 @@ package config
 
 // Site はサイト全体のメタ情報を保持する。
 type Site struct {
-	Title       string `yaml:"title"`
-	Description string `yaml:"description"`
-	BrandColor  string `yaml:"brandColor"`
-	Author      string `yaml:"author"`
-	License     string `yaml:"license"`
-	Repo        string `yaml:"repo"`
-	EditBranch  string `yaml:"editBranch"`
-	BasePath    string `yaml:"basePath"`
-	SiteURL     string `yaml:"siteUrl"` // 公開URL (sitemap/RSS/OGP 用, 例: https://example.com)
-	Layout      Layout `yaml:"layout"`
+	Title        string       `yaml:"title"`
+	Description  string       `yaml:"description"`
+	BrandColor   string       `yaml:"brandColor"`
+	Author       string       `yaml:"author"`
+	License      string       `yaml:"license"`
+	Repo         string       `yaml:"repo"`
+	EditBranch   string       `yaml:"editBranch"`
+	BasePath     string       `yaml:"basePath"`
+	SiteURL      string       `yaml:"siteUrl"` // 公開URL (sitemap/RSS/OGP 用, 例: https://example.com)
+	Layout       Layout       `yaml:"layout"`
+	ProgressSync ProgressSync `yaml:"progressSync"`
 }
 
 // Layout は dagre に渡すレイアウトパラメータ。
@@ -19,6 +20,12 @@ type Layout struct {
 	RankDir string  `yaml:"rankDir"` // TB / LR / BT / RL
 	NodeSep float64 `yaml:"nodeSep"`
 	RankSep float64 `yaml:"rankSep"`
+}
+
+// ProgressSync は進捗バックエンド同期の設定。
+type ProgressSync struct {
+	Enabled  bool   `yaml:"enabled"`
+	Endpoint string `yaml:"endpoint"` // 末尾スラッシュなしのベース URL
 }
 
 // NodeType はノードの重要度を表す。

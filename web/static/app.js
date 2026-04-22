@@ -29,6 +29,7 @@ function setNodeState(nodeId, patch) {
   const cur = getNodeState(nodeId);
   progress[roadmapId][nodeId] = { ...cur, ...patch };
   saveProgress(progress);
+  schedulePut(roadmapId);
 }
 
 // ===== Progress calculation =====
@@ -677,6 +678,121 @@ function initShare() {
   }
 }
 
+// ===== Backend sync =====
+// TEST:HTTP_BEGIN
+const sync = cfg.progressSync || { enabled: false };
+const SYNC_DEBOUNCE_MS = 800;
+let putTimer = null;
+
+const DEVICE_KEY = 'roadmapper:deviceId';
+function getDeviceId() {
+  let id = localStorage.getItem(DEVICE_KEY);
+  if (!id) {
+    id = (crypto.randomUUID?.() || (Date.now() + '-' + Math.random().toString(36).slice(2)));
+    localStorage.setItem(DEVICE_KEY, id);
+  }
+  return id;
+}
+
+// TEST:MERGE_BEGIN
+// skipped と done はどちらも terminal だが done を優先する (達成 > スキップ の安全側バイアス)。
+const STATE_RANK = { none: 0, 'in-progress': 1, skipped: 2, done: 2 };
+
+function mergeRoadmap(local, remote) {
+  const out = { ...remote };
+  for (const id of new Set([...Object.keys(local), ...Object.keys(remote)])) {
+    const a = local[id] || { state: 'none', tasks: [] };
+    const b = remote[id] || { state: 'none', tasks: [] };
+    const rankA = STATE_RANK[a.state] || 0;
+    const rankB = STATE_RANK[b.state] || 0;
+    let state;
+    if (rankA > rankB) state = a.state;
+    else if (rankB > rankA) state = b.state;
+    else state = (a.state === 'done' || b.state === 'done') ? 'done' : a.state;
+    const len = Math.max((a.tasks || []).length, (b.tasks || []).length);
+    const tasks = Array.from({ length: len }, (_, i) => !!(a.tasks?.[i] || b.tasks?.[i]));
+    out[id] = { state, tasks };
+  }
+  return out;
+}
+// TEST:MERGE_END
+
+async function fetchRemote(rmId) {
+  if (!sync.enabled || !sync.endpoint) return null;
+  const url = `${sync.endpoint}/${encodeURIComponent(getDeviceId())}/${encodeURIComponent(rmId)}`;
+  try {
+    const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
+    if (res.status === 404) return {};
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+async function flushPut(rmId) {
+  const url = `${sync.endpoint}/${encodeURIComponent(getDeviceId())}/${encodeURIComponent(rmId)}`;
+  const body = JSON.stringify(progress[rmId] || {});
+  const dirtyKey = `roadmapper:sync-dirty:${rmId}`;
+  localStorage.setItem(dirtyKey, '1');
+  try {
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    localStorage.removeItem(dirtyKey);
+  } catch (e) {
+    console.warn('[roadmapper] progress PUT failed', e);
+  }
+}
+
+function schedulePut(rmId) {
+  if (!sync.enabled || !sync.endpoint || !rmId) return;
+  clearTimeout(putTimer);
+  putTimer = setTimeout(() => flushPut(rmId), SYNC_DEBOUNCE_MS);
+}
+
+async function retryDirty() {
+  if (!sync.enabled || !sync.endpoint) return;
+  const flushes = [];
+  for (const key of Object.keys(localStorage)) {
+    if (!key.startsWith('roadmapper:sync-dirty:')) continue;
+    const rmId = key.slice('roadmapper:sync-dirty:'.length);
+    if (progress[rmId]) flushes.push(flushPut(rmId));
+  }
+  await Promise.all(flushes);
+}
+// TEST:HTTP_END
+
+async function syncOnLoad() {
+  if (!sync.enabled) return;
+  const urlParams = new URLSearchParams(location.search);
+  if (urlParams.get('p')) return; // シェアビューは同期しない
+  if (!roadmapId) return;
+  const remote = await fetchRemote(roadmapId);
+  if (remote && Object.keys(remote).length) {
+    progress[roadmapId] = mergeRoadmap(progress[roadmapId] || {}, remote);
+    saveProgress(progress);
+    schedulePut(roadmapId);
+    updateProgressBar();
+    updateNodeVisuals();
+  }
+}
+
+async function syncIndexOnLoad() {
+  if (!sync.enabled) return;
+  const ids = window.ROADMAP_IDS ? [...window.ROADMAP_IDS] : [];
+  await Promise.all(ids.map(async (id) => {
+    const remote = await fetchRemote(id);
+    if (remote && Object.keys(remote).length) {
+      progress[id] = mergeRoadmap(progress[id] || {}, remote);
+    }
+  }));
+  saveProgress(progress);
+}
+
+window.addEventListener('online', retryDirty);
+
 // ===== Event wiring =====
 document.addEventListener('DOMContentLoaded', () => {
   // ノードクリック
@@ -714,6 +830,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initKeyboard();
   initZoomPan();
   initShare();
+  retryDirty();
 
   // URL の #nodeId でパネルを開く
   if (location.hash) {
@@ -721,20 +838,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (nodeData[id]) openPanel(id);
   }
 
-  // index ページのカード進捗
+  // index ページのカード進捗とバックエンド同期
   const roadmapIds = window.ROADMAP_IDS || [];
-  roadmapIds.forEach(rmId => {
-    const pct = calcRoadmapProgress(rmId);
-    const card = document.querySelector(`.card-progress[data-roadmap="${rmId}"]`);
-    if (!card) return;
-    const bar = card.querySelector('.progress-bar');
-    const label = card.querySelector('.progress-label');
-    if (bar) bar.style.setProperty('--progress', pct + '%');
-    if (label) label.textContent = pct + '%';
+  syncIndexOnLoad().then(() => {
+    roadmapIds.forEach(rmId => {
+      const pct = calcRoadmapProgress(rmId);
+      const card = document.querySelector(`.card-progress[data-roadmap="${rmId}"]`);
+      if (!card) return;
+      const bar = card.querySelector('.progress-bar');
+      const label = card.querySelector('.progress-label');
+      if (bar) bar.style.setProperty('--progress', pct + '%');
+      if (label) label.textContent = pct + '%';
+    });
   });
 
   updateProgressBar();
   updateNodeVisuals();
+  syncOnLoad();
 });
 
 function updateThemeIcon(theme) {

@@ -58,22 +58,23 @@ func RenderRoadmapPage(
 	}
 
 	tmplData := map[string]any{
-		"Site":            cfg.Site,
-		"Roadmap":         rm,
-		"SVG":             template.HTML(svgStr),
-		"BrandColor":      colors.Base,
-		"BrandColorLight": colors.Light,
-		"BasePath":        basePath,
-		"AssetBase":       assetBase,
-		"BasePathJSON":    jsonStr(basePath),
-		"RepoJSON":        jsonStr(cfg.Site.Repo),
-		"EditBranchJSON":  jsonStr(cfg.Site.EditBranch),
-		"RoadmapIdJSON":   jsonStr(rm.ID),
-		"NodeDataJSON":    template.JS(nodeDataJSON),
-		"NodeOrderJSON":   template.JS(nodeOrderJSON),
-		"HasMermaid":      hasMermaid,
-		"OGPUrl":          ogpURL,
-		"ChromaCSS":       template.CSS(ChromaCSS()),
+		"Site":             cfg.Site,
+		"Roadmap":          rm,
+		"SVG":              template.HTML(svgStr),
+		"BrandColor":       colors.Base,
+		"BrandColorLight":  colors.Light,
+		"BasePath":         basePath,
+		"AssetBase":        assetBase,
+		"BasePathJSON":     jsonStr(basePath),
+		"RepoJSON":         jsonStr(cfg.Site.Repo),
+		"EditBranchJSON":   jsonStr(cfg.Site.EditBranch),
+		"RoadmapIdJSON":    jsonStr(rm.ID),
+		"ProgressSyncJSON": progressSyncJSON(cfg),
+		"NodeDataJSON":     template.JS(nodeDataJSON),
+		"NodeOrderJSON":    template.JS(nodeOrderJSON),
+		"HasMermaid":       hasMermaid,
+		"OGPUrl":           ogpURL,
+		"ChromaCSS":        template.CSS(ChromaCSS()),
 	}
 
 	return renderTemplate(webFS, "templates/roadmap.html", tmplData)
@@ -109,16 +110,17 @@ func RenderIndexPage(
 	}
 
 	tmplData := map[string]any{
-		"Site":            cfg.Site,
-		"Roadmaps":        cfg.Roadmaps,
-		"BrandColor":      colors.Base,
-		"BrandColorLight": colors.Light,
-		"BasePath":        basePath,
-		"BasePathJSON":    jsonStr(basePath),
-		"RoadmapIdsJSON":  template.JS(idsJSON),
-		"NodeIdsJSON":     template.JS(nodeIdsJSON),
-		"OGPUrl":          ogpURL,
-		"RSSUrl":          rssURL,
+		"Site":             cfg.Site,
+		"Roadmaps":         cfg.Roadmaps,
+		"BrandColor":       colors.Base,
+		"BrandColorLight":  colors.Light,
+		"BasePath":         basePath,
+		"BasePathJSON":     jsonStr(basePath),
+		"ProgressSyncJSON": progressSyncJSON(cfg),
+		"RoadmapIdsJSON":   template.JS(idsJSON),
+		"NodeIdsJSON":      template.JS(nodeIdsJSON),
+		"OGPUrl":           ogpURL,
+		"RSSUrl":           rssURL,
 	}
 
 	return renderTemplate(webFS, "templates/index.html", tmplData)
@@ -187,5 +189,13 @@ func renderTemplate(webFS fs.FS, name string, data any) (string, error) {
 
 func jsonStr(s string) template.JS {
 	b, _ := json.Marshal(s)
+	return template.JS(b)
+}
+
+func progressSyncJSON(cfg *config.Config) template.JS {
+	b, _ := json.Marshal(map[string]any{
+		"enabled":  cfg.Site.ProgressSync.Enabled,
+		"endpoint": strings.TrimRight(cfg.Site.ProgressSync.Endpoint, "/"),
+	})
 	return template.JS(b)
 }
