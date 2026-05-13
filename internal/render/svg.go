@@ -73,13 +73,13 @@ func RenderSVG(g *graph.Graph, lr *layout.Result, brandColor string) string {
 
 func buildDefs() string {
 	return `<defs>
-  <marker id="arrow-required" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+  <marker id="arrow-required" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
     <polygon points="0 0, 10 3.5, 0 7" fill="#374151"/>
   </marker>
-  <marker id="arrow-optional" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+  <marker id="arrow-optional" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
     <polygon points="0 0, 10 3.5, 0 7" fill="#9ca3af"/>
   </marker>
-  <marker id="arrow-alternative" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+  <marker id="arrow-alternative" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
     <polygon points="0 0, 10 3.5, 0 7" fill="#6366f1"/>
   </marker>
   <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
@@ -199,34 +199,34 @@ func renderEdge(sb *strings.Builder, parent, child *graph.Node, lr *layout.Resul
 	style := edgeStyles[child.Node.Type]
 	markerID := "arrow-" + string(child.Node.Type)
 
+	// 始点・終点の制御点は流れ方向に対し垂直なタンジェントになる位置に置く。
+	// これにより終端は必ず底辺中心 (TB/BT) または辺中央 (LR/RL) を真っ直ぐ刺す。
+	// パス終端は矢印長 (arrowLen) ぶん手前で止め、矢印の先端がノード境界にちょうど触れるようにする。
+	const arrowLen = 10.0
 	var x1, y1, x2, y2, cx1, cy1, cx2, cy2 float64
 
 	switch lr.RankDir {
 	case "LR":
-		// 親の右端中央 → 子の左端中央
 		x1, y1 = pnl.X+pnl.Width/2, pnl.Y
-		x2, y2 = cnl.X-cnl.Width/2, cnl.Y
+		x2, y2 = cnl.X-cnl.Width/2-arrowLen, cnl.Y
 		midX := (x1 + x2) / 2
 		cx1, cy1 = midX, y1
 		cx2, cy2 = midX, y2
 	case "RL":
-		// 親の左端中央 → 子の右端中央
 		x1, y1 = pnl.X-pnl.Width/2, pnl.Y
-		x2, y2 = cnl.X+cnl.Width/2, cnl.Y
+		x2, y2 = cnl.X+cnl.Width/2+arrowLen, cnl.Y
 		midX := (x1 + x2) / 2
 		cx1, cy1 = midX, y1
 		cx2, cy2 = midX, y2
 	case "BT":
-		// 親の上端中央 → 子の下端中央
 		x1, y1 = pnl.X, pnl.Y-pnl.Height/2
-		x2, y2 = cnl.X, cnl.Y+cnl.Height/2
+		x2, y2 = cnl.X, cnl.Y+cnl.Height/2+arrowLen
 		midY := (y1 + y2) / 2
 		cx1, cy1 = x1, midY
 		cx2, cy2 = x2, midY
 	default: // TB
-		// 親の下端中央 → 子の上端中央
 		x1, y1 = pnl.X, pnl.Y+pnl.Height/2
-		x2, y2 = cnl.X, cnl.Y-cnl.Height/2
+		x2, y2 = cnl.X, cnl.Y-cnl.Height/2-arrowLen
 		midY := (y1 + y2) / 2
 		cx1, cy1 = x1, midY
 		cx2, cy2 = x2, midY
