@@ -189,9 +189,10 @@ type NodeLayout struct {
 
 // Result はグラフ全体のレイアウト結果。
 type Result struct {
-	Nodes  map[string]NodeLayout
-	Width  float64
-	Height float64
+	Nodes   map[string]NodeLayout
+	Width   float64
+	Height  float64
+	RankDir string // TB / LR / BT / RL
 }
 
 // Compute は g のレイアウトを dagre.js で計算して Result を返す。
@@ -217,7 +218,7 @@ func Compute(g *graph.Graph, cfg *config.Config) (*Result, error) {
 		return nil, fmt.Errorf("レイアウト結果のパースに失敗: %w", err)
 	}
 
-	result := &Result{Nodes: make(map[string]NodeLayout)}
+	result := &Result{Nodes: make(map[string]NodeLayout), RankDir: layout.RankDir}
 
 	for id, pos := range raw {
 		if id == "__graph__" {

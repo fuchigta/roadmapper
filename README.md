@@ -117,7 +117,7 @@ site:
   siteUrl: ""                          # 公開 URL (sitemap.xml / RSS / OGP 用)
   layout:
     rankDir: TB                        # TB / LR / BT / RL
-    nodeSep: 60
+    nodeSep: 50
     rankSep: 80
 
 roadmaps:
@@ -136,6 +136,10 @@ roadmaps:
       - id: css
         title: CSS
         parents: [html]               # 複数親 → DAG
+        difficulty: beginner          # beginner / intermediate / advanced (任意)
+        estimatedTime: "3d"           # 推定所要時間 (任意, 例: "2h", "3d")
+        x: 300                        # 手動 X 座標 (任意, 自動レイアウトを上書き)
+        y: 200                        # 手動 Y 座標 (任意, 自動レイアウトを上書き)
         children:
           - id: flexbox
             title: Flexbox

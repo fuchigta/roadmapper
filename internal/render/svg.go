@@ -196,18 +196,41 @@ func renderEdge(sb *strings.Builder, parent, child *graph.Node, lr *layout.Resul
 		return
 	}
 
-	// エッジの type は子ノードの type に従う
 	style := edgeStyles[child.Node.Type]
-
-	// 親の下端 → 子の上端 への折れ線パス
-	x1 := pnl.X
-	y1 := pnl.Y + pnl.Height/2
-	x2 := cnl.X
-	y2 := cnl.Y - cnl.Height/2
-
-	midY := (y1 + y2) / 2
-
 	markerID := "arrow-" + string(child.Node.Type)
+
+	var x1, y1, x2, y2, cx1, cy1, cx2, cy2 float64
+
+	switch lr.RankDir {
+	case "LR":
+		// 親の右端中央 → 子の左端中央
+		x1, y1 = pnl.X+pnl.Width/2, pnl.Y
+		x2, y2 = cnl.X-cnl.Width/2, cnl.Y
+		midX := (x1 + x2) / 2
+		cx1, cy1 = midX, y1
+		cx2, cy2 = midX, y2
+	case "RL":
+		// 親の左端中央 → 子の右端中央
+		x1, y1 = pnl.X-pnl.Width/2, pnl.Y
+		x2, y2 = cnl.X+cnl.Width/2, cnl.Y
+		midX := (x1 + x2) / 2
+		cx1, cy1 = midX, y1
+		cx2, cy2 = midX, y2
+	case "BT":
+		// 親の上端中央 → 子の下端中央
+		x1, y1 = pnl.X, pnl.Y-pnl.Height/2
+		x2, y2 = cnl.X, cnl.Y+cnl.Height/2
+		midY := (y1 + y2) / 2
+		cx1, cy1 = x1, midY
+		cx2, cy2 = x2, midY
+	default: // TB
+		// 親の下端中央 → 子の上端中央
+		x1, y1 = pnl.X, pnl.Y+pnl.Height/2
+		x2, y2 = cnl.X, cnl.Y-cnl.Height/2
+		midY := (y1 + y2) / 2
+		cx1, cy1 = x1, midY
+		cx2, cy2 = x2, midY
+	}
 
 	var dashAttr string
 	if style.Dash != "none" {
@@ -220,7 +243,7 @@ func renderEdge(sb *strings.Builder, parent, child *graph.Node, lr *layout.Resul
 			`marker-end="url(#%s)" `+
 			`data-source=%q data-target=%q class="roadmap-edge"/>`,
 		x1, y1,
-		x1, midY, x2, midY,
+		cx1, cy1, cx2, cy2,
 		x2, y2,
 		style.Color, dashAttr, markerID,
 		parent.ID, child.ID)

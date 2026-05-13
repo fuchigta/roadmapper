@@ -1,10 +1,105 @@
 package content_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/fuchigta/roadmapper/internal/content"
 )
+
+func writeFile(t *testing.T, dir, rel, body string) {
+	t.Helper()
+	path := filepath.Join(dir, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestLoadDir_recursive(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "intro.md", "# intro")
+	writeFile(t, dir, "frontend/html.md", "# html")
+	writeFile(t, dir, "frontend/css.md", "# css")
+
+	docs, err := content.LoadDir(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, key := range []string{"intro", "frontend/html", "frontend/css"} {
+		if docs[key] == nil {
+			t.Errorf("docs[%q] が nil です", key)
+		}
+	}
+	// フォールバックキー
+	for _, key := range []string{"html", "css"} {
+		if docs[key] == nil {
+			t.Errorf("フォールバックキー docs[%q] が nil です", key)
+		}
+	}
+	// intro はルート直下なのでフォールバック不要 (relID == base)
+	if docs["intro"] == nil {
+		t.Error("docs[\"intro\"] が nil です")
+	}
+	// フォールバックキーと相対パスキーは同じ実体を指す
+	if docs["html"] != docs["frontend/html"] {
+		t.Error("docs[\"html\"] と docs[\"frontend/html\"] が別の実体です")
+	}
+}
+
+func TestLoadDir_ambiguousBase(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "frontend/html.md", "# html frontend")
+	writeFile(t, dir, "backend/html.md", "# html backend")
+
+	docs, err := content.LoadDir(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// 完全パスキーは両方引ける
+	if docs["frontend/html"] == nil {
+		t.Error("docs[\"frontend/html\"] が nil です")
+	}
+	if docs["backend/html"] == nil {
+		t.Error("docs[\"backend/html\"] が nil です")
+	}
+	// 曖昧なフォールバックキーは存在しない
+	if docs["html"] != nil {
+		t.Error("曖昧なフォールバックキー docs[\"html\"] は nil であるべきです")
+	}
+}
+
+func TestLoadDir_rootWins(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "html.md", "# root html")
+	writeFile(t, dir, "frontend/html.md", "# frontend html")
+
+	docs, err := content.LoadDir(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if docs["html"] == nil {
+		t.Fatal("docs[\"html\"] が nil です")
+	}
+	// ルート直下のファイルが優先される
+	if docs["html"].ID != "html" {
+		t.Errorf("docs[\"html\"].ID = %q, want \"html\"", docs["html"].ID)
+	}
+}
+
+func TestLoadDir_missingDir(t *testing.T) {
+	docs, err := content.LoadDir("/nonexistent/path/xyz")
+	if err != nil {
+		t.Fatalf("存在しないディレクトリはエラーを返すべきではない: %v", err)
+	}
+	if len(docs) != 0 {
+		t.Errorf("空の map を期待しましたが %d 件あります", len(docs))
+	}
+}
 
 func TestParse_withFrontmatter(t *testing.T) {
 	raw := `---

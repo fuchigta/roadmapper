@@ -13,7 +13,7 @@
 ```
 roadmap.yml ──▶ config.Load() ──▶ graph.Build() ──▶ layout.Compute()
                                                             │
-content/*.md ─▶ content.LoadDir() ─▶ render.RenderMarkdown()
+content/**/*.md ─▶ content.LoadDir() ─▶ render.RenderMarkdown()
                                                             │
                                               render.RenderSVG()
                                               render.RenderRoadmapPage()

@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -51,16 +52,24 @@ func runDev(configPath, outDir string, port int) error {
 	}
 	defer watcher.Close()
 
-	// roadmap.yml と content/ を監視
+	// roadmap.yml を監視
 	configDir := filepath.Dir(configPath)
-	watchTargets := []string{configPath, filepath.Join(configDir, "content")}
-	for _, t := range watchTargets {
-		if _, err := os.Stat(t); err == nil {
-			if err := watcher.Add(t); err != nil {
-				log.Printf("監視追加失敗 %s: %v", t, err)
-			}
+	if _, err := os.Stat(configPath); err == nil {
+		if err := watcher.Add(configPath); err != nil {
+			log.Printf("監視追加失敗 %s: %v", configPath, err)
 		}
 	}
+	// content/ とサブディレクトリをすべて監視 (fsnotify は再帰監視しないため個別登録)
+	contentDir := filepath.Join(configDir, "content")
+	filepath.WalkDir(contentDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || !d.IsDir() {
+			return nil
+		}
+		if err := watcher.Add(path); err != nil {
+			log.Printf("監視追加失敗 %s: %v", path, err)
+		}
+		return nil
+	})
 
 	// デバウンス付きリビルドゴルーチン
 	go func() {

@@ -4,6 +4,7 @@ package content
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,28 +31,70 @@ type Doc struct {
 	Body        string // frontmatter 除去後の Markdown 本文
 }
 
-// LoadDir は dir/ 以下の <id>.md ファイルをすべて読み込み、map[id]Doc を返す。
+// LoadDir は dir/ 以下を再帰的にスキャンして <id>.md ファイルをすべて読み込む。
+//
+// map のキーは 2 種類登録される:
+//  1. 相対パスキー: "frontend/html" のようなスラッシュ区切りの相対パス (常に登録)
+//  2. 末尾名フォールバックキー: "html" のようなファイル名のみ (一意な場合のみ登録)
+//
+// 同じファイル名が複数ディレクトリに存在する場合、フォールバックキーは曖昧として登録されない。
+// ルート直下に同名ファイルが存在する場合はルートが優先される。
 func LoadDir(dir string) (map[string]*Doc, error) {
-	entries, err := os.ReadDir(dir)
-	if os.IsNotExist(err) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return map[string]*Doc{}, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("content ディレクトリを読み込めません: %w", err)
 	}
 
 	docs := map[string]*Doc{}
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
-			continue
-		}
-		id := strings.TrimSuffix(e.Name(), ".md")
-		path := filepath.Join(dir, e.Name())
-		doc, err := Load(path, id)
+	// base → 登録済み relID。空文字列は「曖昧」マーク
+	baseOwners := map[string]string{}
+
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil, err
+			return err
 		}
-		docs[id] = doc
+		// 隠しディレクトリはスキップ
+		if d.IsDir() && path != dir && strings.HasPrefix(d.Name(), ".") {
+			return fs.SkipDir
+		}
+		if d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
+			return nil
+		}
+
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		relID := strings.TrimSuffix(filepath.ToSlash(rel), ".md")
+
+		doc, err := Load(path, relID)
+		if err != nil {
+			return err
+		}
+		docs[relID] = doc
+
+		// フォールバックキー (ルートファイルは relID == base なので登録不要)
+		base := strings.TrimSuffix(d.Name(), ".md")
+		if base == relID {
+			return nil
+		}
+		switch owner, seen := baseOwners[base]; {
+		case !seen:
+			// ルート直下に同名ファイルがあれば docs[base] が既にキー base で登録済み
+			// (ルートファイルは relID == base なので baseOwners には記録されない)
+			if _, rootExists := docs[base]; !rootExists {
+				docs[base] = doc
+				baseOwners[base] = relID
+			}
+		case owner != "":
+			// 2 件目の衝突 → 曖昧化してフォールバックキーを削除
+			delete(docs, base)
+			baseOwners[base] = ""
+			// owner == "" は既に曖昧確定、何もしない
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("content ディレクトリを読み込めません: %w", err)
 	}
 	return docs, nil
 }

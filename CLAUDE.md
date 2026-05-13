@@ -56,8 +56,8 @@ internal/
     schema.go                   # Config / Site / Roadmap / Node / Link 構造体
     loader.go                   # Load(path) → *Config
     validate.go                 # Validate(*Config) error
-  content/                      # content/<id>.md ローダ
-    loader.go                   # LoadDir(dir) → map[string]*Doc
+  content/                      # content/**/*.md ローダ (サブディレクトリ対応)
+    loader.go                   # LoadDir(dir) → map[string]*Doc (再帰スキャン、相対パス優先・ファイル名末尾フォールバック)
   graph/                        # ノード/エッジ DAG モデル
     graph.go                    # Build(*Roadmap) → *Graph (cycle detection)
   layout/                       # Goja + dagre.js でレイアウト計算
@@ -131,6 +131,17 @@ web/                            # ビルド時埋め込みアセット
 - **フロントエンドフレームワーク追加禁止** — `web/static/app.js` は素の JS のまま維持する (目標 30KB 以内)
 - **`filepath.Join` を embed FS パスに使用禁止** — `path.Join` を使うこと
 - **`web/` 以下のファイルをビルド外から直接コピーしない** — `web.FS` 経由でアクセスする
+
+### content/ とノード ID の対応規則
+
+`content/` は `filepath.WalkDir` で再帰的にスキャンし、map キーを 2 種類登録する:
+
+- **相対パスキー** (常に登録): `content/frontend/html.md` → `"frontend/html"`
+- **末尾名フォールバックキー** (一意な場合のみ): `"html"` → 同じ Doc を指す
+
+優先規則: ルート直下ファイル (`content/html.md` → `"html"`) が優先。複数サブディレクトリに
+同名ファイルがある場合、フォールバックキーは**曖昧として登録されない** (`docs["html"]` が nil
+になる)。その場合は相対パスキー (`"frontend/html"`) で参照すること。
 
 ## テスト方針
 
