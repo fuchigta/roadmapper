@@ -195,6 +195,68 @@ graph LR; HTML --> CSS --> JS
 - mermaid コードブロックはブラウザ側で描画されます
 - `links:` は frontmatter と `roadmap.yml` 両方に書けます (frontmatter が優先)
 
+### content/ のサブディレクトリ
+
+`content/` 配下は再帰的にスキャンされ、ノード ID と次の優先順で解決されます:
+
+1. ノードに `content: <path>` が指定されていればそのパス (拡張子なし) を引く
+2. `content/<id>.md` (ID 自体がスラッシュ区切りパスの場合は `content/<id>.md` 直接)
+3. ファイル名末尾フォールバック (`content/frontend/html.md` → ID `html` で解決)
+
+複数サブディレクトリに同名ファイルがある場合、末尾名フォールバックは曖昧になり
+登録されません。その場合は明示的に `content:` で指定するか、ID 側を
+`frontend/html` のようなパス形式にしてください。
+
+```yaml
+- id: html
+  title: HTML
+  content: frontend/html      # content/frontend/html.md を参照
+```
+
+ビルド時にノードに対応する `.md` が見つからなかった場合は warning がログに
+出力されます。`roadmapper validate` でも同じ警告を出し、`--strict` を付けると
+未解決ノードがあれば exit code 1 で終了します (CI でブロックしたい場合に有用)。
+
+### 画像など静的ファイルの参照
+
+`content/` 配下に画像や PDF などの非 `.md` ファイルを置くと、ビルド時に
+`dist/content/` に同じ構造でコピーされます。マークダウン内では現在の `.md`
+からの**相対パス**で参照してください。
+
+```text
+content/
+├── frontend/
+│   ├── html.md
+│   └── images/
+│       └── dom.png
+```
+
+```markdown
+<!-- content/frontend/html.md 内 -->
+![DOM の図](./images/dom.png)
+```
+
+ビルド時に URL は `dist/{roadmapId}/index.html` から正しく解決されるパス
+(例: `../content/frontend/images/dom.png`) に自動で書き換えられます。
+`basePath` が設定されている場合も同様に正しいパスへ書き換わります。
+
+絶対 URL (`https://…`)、ルート相対パス (`/foo`)、`mailto:`、フラグメント
+(`#section`) はそのまま保持されます。
+
+#### コピー対象から除外する
+
+```yaml
+site:
+  contentAssets:
+    exclude:
+      - "**/drafts/**"
+      - "*.psd"
+      - "**/raw/*"
+```
+
+`*` は単一セグメント、`**` は複数セグメントにマッチします (doublestar 風)。
+パターンは `content/` からの相対パスに対して評価されます。
+
 ## GitHub Pages へのデプロイ
 
 ```bash

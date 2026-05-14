@@ -2,17 +2,25 @@ package config
 
 // Site はサイト全体のメタ情報を保持する。
 type Site struct {
-	Title        string       `yaml:"title"`
-	Description  string       `yaml:"description"`
-	BrandColor   string       `yaml:"brandColor"`
-	Author       string       `yaml:"author"`
-	License      string       `yaml:"license"`
-	Repo         string       `yaml:"repo"`
-	EditBranch   string       `yaml:"editBranch"`
-	BasePath     string       `yaml:"basePath"`
-	SiteURL      string       `yaml:"siteUrl"` // 公開URL (sitemap/RSS/OGP 用, 例: https://example.com)
-	Layout       Layout       `yaml:"layout"`
-	ProgressSync ProgressSync `yaml:"progressSync"`
+	Title         string        `yaml:"title"`
+	Description   string        `yaml:"description"`
+	BrandColor    string        `yaml:"brandColor"`
+	Author        string        `yaml:"author"`
+	License       string        `yaml:"license"`
+	Repo          string        `yaml:"repo"`
+	EditBranch    string        `yaml:"editBranch"`
+	BasePath      string        `yaml:"basePath"`
+	SiteURL       string        `yaml:"siteUrl"` // 公開URL (sitemap/RSS/OGP 用, 例: https://example.com)
+	Layout        Layout        `yaml:"layout"`
+	ProgressSync  ProgressSync  `yaml:"progressSync"`
+	ContentAssets ContentAssets `yaml:"contentAssets"`
+}
+
+// ContentAssets は content/ 配下の静的ファイル（画像など）コピー設定。
+type ContentAssets struct {
+	// Exclude は content/ からの相対パスに対するコピー除外 glob パターン。
+	// `*` は単一セグメント、`**` は複数セグメントをマッチする。
+	Exclude []string `yaml:"exclude"`
 }
 
 // Layout は dagre に渡すレイアウトパラメータ。
@@ -64,6 +72,7 @@ type Node struct {
 	Links         []Link     `yaml:"links"`         // 参考資料リンク
 	Difficulty    Difficulty `yaml:"difficulty"`    // 難易度 (任意)
 	EstimatedTime string     `yaml:"estimatedTime"` // 推定所要時間 (任意, 例: "2h", "3d")
+	Content       string     `yaml:"content"`       // content/<path>.md を明示指定 (任意、拡張子なし)
 }
 
 // Roadmap は1つのロードマップ全体を表す。

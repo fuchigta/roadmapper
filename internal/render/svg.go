@@ -241,12 +241,12 @@ func renderEdge(sb *strings.Builder, parent, child *graph.Node, lr *layout.Resul
 		`<path d="M %v %v C %v %v %v %v %v %v" `+
 			`fill="none" stroke="%s" stroke-width="1.5" %s `+
 			`marker-end="url(#%s)" `+
-			`data-source=%q data-target=%q class="roadmap-edge"/>`,
+			`data-source=%q data-target=%q data-type=%q class="roadmap-edge"/>`,
 		x1, y1,
 		cx1, cy1, cx2, cy2,
 		x2, y2,
 		style.Color, dashAttr, markerID,
-		parent.ID, child.ID)
+		parent.ID, child.ID, string(child.Node.Type))
 }
 
 func escapeXML(s string) string {

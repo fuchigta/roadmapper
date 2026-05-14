@@ -2,6 +2,7 @@ package render
 
 import (
 	"bytes"
+	"path"
 	"regexp"
 	"strings"
 
@@ -51,8 +52,26 @@ var md = goldmark.New(
 // RenderMarkdown は Markdown 文字列を HTML に変換する。
 // mermaid コードブロックは <pre class="mermaid"> でパススルーする。
 func RenderMarkdown(src string) (string, error) {
+	return RenderMarkdownWithBase(src, "")
+}
+
+// RenderMarkdownWithBase は Markdown を HTML に変換しつつ、
+// 画像・リンクの相対 URL に urlPrefix を付加する。
+//
+// urlPrefix が空の場合は URL を変更しない。
+// スキーム付き URL (http://, mailto: など)、ルート相対パス (/foo)、
+// フラグメントのみ (#section) はそのまま保持する。
+func RenderMarkdownWithBase(src, urlPrefix string) (string, error) {
+	source := []byte(src)
+	reader := text.NewReader(source)
+	doc := md.Parser().Parse(reader)
+
+	if urlPrefix != "" {
+		rewriteRelativeURLs(doc, urlPrefix)
+	}
+
 	var buf bytes.Buffer
-	if err := md.Convert([]byte(src), &buf); err != nil {
+	if err := md.Renderer().Render(&buf, source, doc); err != nil {
 		return "", err
 	}
 
@@ -87,6 +106,66 @@ func unescapeHTML(s string) string {
 	s = reGt.ReplaceAllString(s, ">")
 	s = reQuot.ReplaceAllString(s, `"`)
 	return s
+}
+
+// rewriteRelativeURLs は AST 内の画像・リンクの相対 URL に prefix を付加する。
+func rewriteRelativeURLs(doc ast.Node, prefix string) {
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		switch v := n.(type) {
+		case *ast.Image:
+			v.Destination = rewriteDestination(v.Destination, prefix)
+		case *ast.Link:
+			v.Destination = rewriteDestination(v.Destination, prefix)
+		}
+		return ast.WalkContinue, nil
+	})
+}
+
+func rewriteDestination(dest []byte, prefix string) []byte {
+	s := string(dest)
+	if s == "" || isAbsoluteURL(s) {
+		return dest
+	}
+	// クエリ/フラグメントを保持
+	suffix := ""
+	if i := strings.IndexAny(s, "?#"); i >= 0 {
+		suffix = s[i:]
+		s = s[:i]
+	}
+	if s == "" {
+		return dest
+	}
+	cleaned := path.Clean(prefix + s)
+	return []byte(cleaned + suffix)
+}
+
+// isAbsoluteURL は dest が書き換え不要な絶対 URL/パス/フラグメントか判定する。
+func isAbsoluteURL(s string) bool {
+	if strings.HasPrefix(s, "/") { // ルート相対 or "//" プロトコル相対
+		return true
+	}
+	if strings.HasPrefix(s, "#") { // フラグメントのみ
+		return true
+	}
+	// scheme:... 形式 (http, https, mailto, data, tel, ftp など)
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c == ':' {
+			return i > 0
+		}
+		if !isSchemeChar(c) {
+			return false
+		}
+	}
+	return false
+}
+
+func isSchemeChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+		(c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.'
 }
 
 // ChromaCSS はシンタックスハイライト用の CSS を返す (ライト + ダーク)。

@@ -7,6 +7,108 @@ import (
 	"github.com/fuchigta/roadmapper/internal/render"
 )
 
+func TestRenderMarkdownWithBase(t *testing.T) {
+	tests := []struct {
+		name    string
+		src     string
+		prefix  string
+		want    string // 出力に含まれるべき部分文字列
+		notWant string // 出力に含まれてはならない部分文字列 (空なら無視)
+	}{
+		{
+			"画像 相対パス ./",
+			"![alt](./images/foo.png)",
+			"../content/frontend/",
+			`src="../content/frontend/images/foo.png"`,
+			"",
+		},
+		{
+			"画像 相対パス bare",
+			"![alt](images/foo.png)",
+			"../content/frontend/",
+			`src="../content/frontend/images/foo.png"`,
+			"",
+		},
+		{
+			"画像 上位相対",
+			"![alt](../shared/foo.png)",
+			"../content/frontend/",
+			`src="../content/shared/foo.png"`,
+			"",
+		},
+		{
+			"リンク 相対パス",
+			"[link](./doc.pdf)",
+			"../content/frontend/",
+			`href="../content/frontend/doc.pdf"`,
+			"",
+		},
+		{
+			"絶対 URL は変更しない",
+			"![alt](https://example.com/x.png)",
+			"../content/frontend/",
+			`src="https://example.com/x.png"`,
+			"../content/frontend/",
+		},
+		{
+			"ルート相対は変更しない",
+			"![alt](/abs/x.png)",
+			"../content/frontend/",
+			`src="/abs/x.png"`,
+			"../content/frontend/",
+		},
+		{
+			"mailto は変更しない",
+			"[mail](mailto:foo@bar.com)",
+			"../content/frontend/",
+			`href="mailto:foo@bar.com"`,
+			"",
+		},
+		{
+			"フラグメントのみは変更しない",
+			"[anchor](#sec)",
+			"../content/frontend/",
+			`href="#sec"`,
+			"",
+		},
+		{
+			"basePath プレフィックス",
+			"![alt](./foo.png)",
+			"/my-repo/content/",
+			`src="/my-repo/content/foo.png"`,
+			"",
+		},
+		{
+			"prefix 空 (後方互換)",
+			"![alt](./foo.png)",
+			"",
+			`src="./foo.png"`,
+			"",
+		},
+		{
+			"クエリ・フラグメント保持",
+			"![alt](./foo.png?v=1#x)",
+			"../content/frontend/",
+			`src="../content/frontend/foo.png?v=1#x"`,
+			"",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := render.RenderMarkdownWithBase(tt.src, tt.prefix)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !strings.Contains(got, tt.want) {
+				t.Errorf("expected %q in output, got: %s", tt.want, got)
+			}
+			if tt.notWant != "" && strings.Contains(got, tt.notWant) {
+				t.Errorf("did not expect %q in output, got: %s", tt.notWant, got)
+			}
+		})
+	}
+}
+
 func TestRenderMarkdown_heading(t *testing.T) {
 	html, err := render.RenderMarkdown("## こんにちは\n\nテスト本文。\n")
 	if err != nil {

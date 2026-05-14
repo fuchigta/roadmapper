@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -29,6 +30,15 @@ type Doc struct {
 	ID          string
 	Frontmatter Frontmatter
 	Body        string // frontmatter 除去後の Markdown 本文
+	// RelDir は content/ からの相対ディレクトリ (`/` 区切り)。
+	// ルート直下のファイルは空文字列。例: content/frontend/html.md → "frontend"
+	RelDir string
+}
+
+// Asset は content/ 配下にある非 .md の静的ファイル。
+type Asset struct {
+	SrcPath string // 実ファイルパス (filepath.Join 区切り)
+	RelPath string // content/ からの相対パス (`/` 区切り)
 }
 
 // LoadDir は dir/ 以下を再帰的にスキャンして <id>.md ファイルをすべて読み込む。
@@ -70,6 +80,12 @@ func LoadDir(dir string) (map[string]*Doc, error) {
 		if err != nil {
 			return err
 		}
+		// 相対ディレクトリ (`/` 区切り、ルートは空文字列)
+		relDir := filepath.ToSlash(filepath.Dir(rel))
+		if relDir == "." {
+			relDir = ""
+		}
+		doc.RelDir = relDir
 		docs[relID] = doc
 
 		// フォールバックキー (ルートファイルは relID == base なので登録不要)
@@ -97,6 +113,46 @@ func LoadDir(dir string) (map[string]*Doc, error) {
 		return nil, fmt.Errorf("content ディレクトリを読み込めません: %w", err)
 	}
 	return docs, nil
+}
+
+// LoadAssets は dir/ 配下の非 .md ファイルを再帰スキャンしてアセットを返す。
+// 隠しディレクトリ (`.` で始まる) と exclude にマッチするものはスキップする。
+// 結果は RelPath 昇順でソートされる。
+func LoadAssets(dir string, exclude []string) ([]Asset, error) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return nil, nil
+	}
+
+	var assets []Asset
+	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if p != dir && strings.HasPrefix(d.Name(), ".") {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if strings.HasSuffix(d.Name(), ".md") {
+			return nil
+		}
+		rel, err := filepath.Rel(dir, p)
+		if err != nil {
+			return err
+		}
+		relSlash := filepath.ToSlash(rel)
+		if MatchAny(exclude, relSlash) {
+			return nil
+		}
+		assets = append(assets, Asset{SrcPath: p, RelPath: relSlash})
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("content アセットのスキャンに失敗: %w", err)
+	}
+	sort.Slice(assets, func(i, j int) bool { return assets[i].RelPath < assets[j].RelPath })
+	return assets, nil
 }
 
 // Load は指定ファイルを読み込み、frontmatter と本文に分離して Doc を返す。

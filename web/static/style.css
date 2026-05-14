@@ -322,6 +322,14 @@ a { color: var(--brand); }
   fill: #e0e7ff;
 }
 
+/* ダークテーマ: エッジ線と矢印先端のコントラストを確保 */
+[data-theme="dark"] .roadmap-edge[data-type="required"]    { stroke: #cbd5e1; }
+[data-theme="dark"] .roadmap-edge[data-type="optional"]    { stroke: #94a3b8; }
+[data-theme="dark"] .roadmap-edge[data-type="alternative"] { stroke: #a5b4fc; }
+[data-theme="dark"] .roadmap-svg #arrow-required polygon    { fill: #cbd5e1; }
+[data-theme="dark"] .roadmap-svg #arrow-optional polygon    { fill: #94a3b8; }
+[data-theme="dark"] .roadmap-svg #arrow-alternative polygon { fill: #a5b4fc; }
+
 /* ノード状態による色付け (JS から data-state 属性を付ける) */
 .roadmap-node[data-state="done"] rect {
   fill: #166534 !important;

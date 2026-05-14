@@ -91,6 +91,47 @@ func TestLoadDir_rootWins(t *testing.T) {
 	}
 }
 
+func TestLoadDir_deepNesting(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "a/b/c.md", "# c")
+
+	docs, err := content.LoadDir(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if docs["a/b/c"] == nil {
+		t.Error("docs[\"a/b/c\"] が nil です")
+	}
+	if docs["c"] == nil {
+		t.Error("末尾名フォールバック docs[\"c\"] が nil です")
+	}
+	if docs["c"] != docs["a/b/c"] {
+		t.Error("フォールバックキーと相対パスキーが別実体です")
+	}
+}
+
+func TestLoadDir_rootAfterSubdir(t *testing.T) {
+	// WalkDir はアルファベット順なので foo/ は x.md より先に処理される。
+	// ルート直下の x.md が後から書き込まれてもルート優先になることを確認。
+	dir := t.TempDir()
+	writeFile(t, dir, "foo/x.md", "# subdir x")
+	writeFile(t, dir, "x.md", "# root x")
+
+	docs, err := content.LoadDir(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if docs["x"] == nil {
+		t.Fatal("docs[\"x\"] が nil です")
+	}
+	if docs["x"].ID != "x" {
+		t.Errorf("docs[\"x\"].ID = %q, want \"x\" (ルート優先)", docs["x"].ID)
+	}
+	if docs["foo/x"] == nil {
+		t.Error("docs[\"foo/x\"] が nil です")
+	}
+}
+
 func TestLoadDir_missingDir(t *testing.T) {
 	docs, err := content.LoadDir("/nonexistent/path/xyz")
 	if err != nil {
@@ -147,6 +188,87 @@ func TestParse_withoutFrontmatter(t *testing.T) {
 	if doc.Frontmatter.Title != "" {
 		t.Error("frontmatter should be empty")
 	}
+}
+
+func TestLoadDir_relDir(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "intro.md", "# intro")
+	writeFile(t, dir, "frontend/html.md", "# html")
+	writeFile(t, dir, "frontend/sub/css.md", "# css")
+
+	docs, err := content.LoadDir(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if docs["intro"].RelDir != "" {
+		t.Errorf("intro RelDir = %q, want \"\"", docs["intro"].RelDir)
+	}
+	if docs["frontend/html"].RelDir != "frontend" {
+		t.Errorf("frontend/html RelDir = %q, want \"frontend\"", docs["frontend/html"].RelDir)
+	}
+	if docs["frontend/sub/css"].RelDir != "frontend/sub" {
+		t.Errorf("frontend/sub/css RelDir = %q, want \"frontend/sub\"", docs["frontend/sub/css"].RelDir)
+	}
+}
+
+func TestLoadAssets(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "intro.md", "# md, not asset")
+	writeFile(t, dir, "frontend/images/dom.png", "PNGDATA")
+	writeFile(t, dir, "frontend/notes.txt", "txt")
+	writeFile(t, dir, "drafts/wip.png", "draft")
+	writeFile(t, dir, "raw.psd", "psd")
+
+	t.Run("no exclude", func(t *testing.T) {
+		assets, err := content.LoadAssets(dir, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		want := map[string]bool{
+			"frontend/images/dom.png": true,
+			"frontend/notes.txt":      true,
+			"drafts/wip.png":          true,
+			"raw.psd":                 true,
+		}
+		if len(assets) != len(want) {
+			t.Errorf("expected %d assets, got %d: %+v", len(want), len(assets), assets)
+		}
+		for _, a := range assets {
+			if !want[a.RelPath] {
+				t.Errorf("unexpected asset %q", a.RelPath)
+			}
+		}
+	})
+
+	t.Run("with exclude", func(t *testing.T) {
+		assets, err := content.LoadAssets(dir, []string{"drafts/**", "*.psd"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		got := map[string]bool{}
+		for _, a := range assets {
+			got[a.RelPath] = true
+		}
+		if got["drafts/wip.png"] {
+			t.Error("drafts/wip.png should be excluded")
+		}
+		if got["raw.psd"] {
+			t.Error("raw.psd should be excluded")
+		}
+		if !got["frontend/images/dom.png"] {
+			t.Error("frontend/images/dom.png should be included")
+		}
+	})
+
+	t.Run("missing dir", func(t *testing.T) {
+		assets, err := content.LoadAssets("/nonexistent/xyz", nil)
+		if err != nil {
+			t.Fatalf("missing dir should not error: %v", err)
+		}
+		if len(assets) != 0 {
+			t.Errorf("expected no assets, got %d", len(assets))
+		}
+	})
 }
 
 func TestParse_emptyBody(t *testing.T) {

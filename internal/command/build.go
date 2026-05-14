@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -73,6 +74,24 @@ func runBuild(configPath, outDir, basePath string) error {
 		return err
 	}
 
+	// content/ 配下の非 .md ファイルを dist/content/ にコピー
+	assets, err := content.LoadAssets(contentDir, cfg.Site.ContentAssets.Exclude)
+	if err != nil {
+		return err
+	}
+	if err := copyContentAssets(outDir, assets); err != nil {
+		return err
+	}
+
+	// assetBase: basePath が空のときはルートへの相対パス "../"
+	assetBase := "../"
+	if basePath != "" {
+		assetBase = basePath
+		if !strings.HasSuffix(assetBase, "/") {
+			assetBase += "/"
+		}
+	}
+
 	// ロードマップ → グラフ のマップ (index ページのカード進捗に使う)
 	graphs := map[string]*graph.Graph{}
 
@@ -93,7 +112,7 @@ func runBuild(configPath, outDir, basePath string) error {
 		}
 
 		// ノード本文を Markdown → HTML / plaintext に変換
-		nodeHTML, nodeText, hasMermaid, err := buildNodeHTML(g, docs)
+		nodeHTML, nodeText, hasMermaid, err := buildNodeHTML(g, docs, assetBase)
 		if err != nil {
 			return err
 		}
@@ -102,12 +121,6 @@ func runBuild(configPath, outDir, basePath string) error {
 		rmDir := filepath.Join(outDir, rm.ID)
 		if err := os.MkdirAll(rmDir, 0o755); err != nil {
 			return fmt.Errorf("ディレクトリ作成失敗: %w", err)
-		}
-
-		// assetBase: basePath が空のときはルートへの相対パス "../"
-		assetBase := "../"
-		if basePath != "" {
-			assetBase = basePath
 		}
 
 		pageHTML, err := render.RenderRoadmapPage(
@@ -156,20 +169,30 @@ func runBuild(configPath, outDir, basePath string) error {
 }
 
 // buildNodeHTML は各ノードの Markdown を HTML / plaintext に変換して map 2 つと mermaid 有無を返す。
-func buildNodeHTML(g *graph.Graph, docs map[string]*content.Doc) (map[string]string, map[string]string, bool, error) {
+func buildNodeHTML(g *graph.Graph, docs map[string]*content.Doc, assetBase string) (map[string]string, map[string]string, bool, error) {
 	nodeHTML := map[string]string{}
 	nodeText := map[string]string{}
 	hasMermaid := false
 
+	var unresolved []string
 	for _, n := range g.Nodes {
-		doc, ok := docs[n.ID]
+		doc, ok := lookupDoc(docs, n.Node)
 		if !ok {
 			nodeHTML[n.ID] = ""
 			nodeText[n.ID] = ""
+			if n.Node.Content != "" {
+				unresolved = append(unresolved, fmt.Sprintf("%s (content: %q)", n.ID, n.Node.Content))
+			} else {
+				unresolved = append(unresolved, n.ID)
+			}
 			continue
 		}
 
-		html, err := render.RenderMarkdown(doc.Body)
+		urlPrefix := assetBase + "content/"
+		if doc.RelDir != "" {
+			urlPrefix += doc.RelDir + "/"
+		}
+		html, err := render.RenderMarkdownWithBase(doc.Body, urlPrefix)
 		if err != nil {
 			return nil, nil, false, fmt.Errorf("ノード %q の Markdown 変換に失敗: %w", n.ID, err)
 		}
@@ -210,7 +233,59 @@ func buildNodeHTML(g *graph.Graph, docs map[string]*content.Doc) (map[string]str
 		}
 	}
 
+	if len(unresolved) > 0 {
+		fmt.Fprintf(os.Stderr, "  warning: %d 個のノードに対応する content/*.md が見つかりません:\n", len(unresolved))
+		for _, id := range unresolved {
+			fmt.Fprintf(os.Stderr, "    - %s\n", id)
+		}
+	}
+
 	return nodeHTML, nodeText, hasMermaid, nil
+}
+
+// lookupDoc はノードに対応する content.Doc を 3 段階で探す:
+//  1. node.Content が指定されていればそのキーで引く (拡張子なし、スラッシュ区切り)
+//  2. node.ID を完全キーとして引く (例: "frontend/html" → docs["frontend/html"])
+//  3. node.ID を末尾名フォールバックキーとして引く (例: "html" → サブディレクトリ配下の docs["html"])
+//
+// ローダが (2) と (3) の両キーを登録しているため、実質的には docs[key] 一発で済む。
+// node.Content 指定時はフォールバックを行わない (明示パスに従う)。
+func lookupDoc(docs map[string]*content.Doc, n *config.Node) (*content.Doc, bool) {
+	if n.Content != "" {
+		doc, ok := docs[n.Content]
+		return doc, ok
+	}
+	doc, ok := docs[n.ID]
+	return doc, ok
+}
+
+// copyContentAssets は content/ 配下のアセットを outDir/content/ にコピーする。
+func copyContentAssets(outDir string, assets []content.Asset) error {
+	for _, a := range assets {
+		dest := filepath.Join(outDir, "content", filepath.FromSlash(a.RelPath))
+		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+			return fmt.Errorf("アセット出力ディレクトリ作成失敗: %w", err)
+		}
+		if err := copyFile(a.SrcPath, dest); err != nil {
+			return fmt.Errorf("アセット %s のコピーに失敗: %w", a.RelPath, err)
+		}
+	}
+	return nil
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
 }
 
 func copyStaticAssets(outDir string) error {
