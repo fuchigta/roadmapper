@@ -269,7 +269,11 @@ function openPanel(nodeId) {
   if (sel) sel.value = getNodeState(nodeId).state;
 
   const content = document.getElementById('panel-content');
-  if (content) content.innerHTML = data.html || '';
+  if (content) {
+    content.innerHTML = data.html || '';
+    content.scrollTop = 0;
+  }
+  if (panel) panel.scrollTop = 0;
 
   restoreChecklists(nodeId, content);
 

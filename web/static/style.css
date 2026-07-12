@@ -460,6 +460,33 @@ a { color: var(--brand); }
   font-style: italic;
 }
 
+/* 折りたたみ (details/summary) */
+.panel-content details {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 12px;
+  margin-bottom: 10px;
+}
+.panel-content details > summary {
+  margin: 0 -12px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-radius: calc(var(--radius) - 1px);
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--transition);
+}
+.panel-content details > summary:hover {
+  background: color-mix(in srgb, var(--brand) 12%, var(--bg-secondary));
+}
+.panel-content details[open] > summary {
+  border-bottom: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+  margin-bottom: 10px;
+}
+
 /* テーブル */
 .panel-content table {
   width: 100%;

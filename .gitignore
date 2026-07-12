@@ -17,3 +17,12 @@ Thumbs.db
 
 # Go
 *.test
+
+# Claude Code local files
+.claude/plans/
+.claude/settings.local.json
+
+# Local development artifacts
+.playwright-cli/
+screenshots/
+testsite/
