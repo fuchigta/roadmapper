@@ -17,6 +17,16 @@ graph TD
 ```
 ````
 
+上の記述は次のように描画されます。
+
+```mermaid
+graph TD
+    A[HTML] --> B[CSS]
+    A --> C[JavaScript]
+    B --> D[フレームワーク]
+    C --> D
+```
+
 ## 対応している図の種類
 
 | 種類 | 説明 |

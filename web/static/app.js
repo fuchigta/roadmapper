@@ -827,6 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.documentElement.dataset.theme = next;
     localStorage.setItem('roadmapper:theme', next);
     updateThemeIcon(next);
+    document.dispatchEvent(new CustomEvent('roadmapper:themechange', { detail: { theme: next } }));
   });
 
   // 各機能の初期化

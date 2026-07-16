@@ -105,8 +105,21 @@
   {{if .HasMermaid}}
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-    mermaid.initialize({ startOnLoad: false, theme: 'default' });
-    document.addEventListener('roadmapper:panelopen', () => mermaid.run({ querySelector: '.panel-content .mermaid' }));
+    const mermaidTheme = () =>
+      document.documentElement.dataset.theme === 'dark' ? 'dark' : 'default';
+    const renderMermaid = () => {
+      const nodes = document.querySelectorAll('.panel-content .mermaid');
+      if (!nodes.length) return;
+      nodes.forEach(el => {
+        if (!el.dataset.mermaidSrc) el.dataset.mermaidSrc = el.textContent;
+        el.textContent = el.dataset.mermaidSrc;
+        el.removeAttribute('data-processed');
+      });
+      mermaid.initialize({ startOnLoad: false, theme: mermaidTheme() });
+      mermaid.run({ nodes });
+    };
+    document.addEventListener('roadmapper:panelopen', renderMermaid);
+    document.addEventListener('roadmapper:themechange', renderMermaid);
   </script>
   {{end}}
 </body>
