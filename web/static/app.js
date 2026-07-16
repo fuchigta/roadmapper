@@ -282,8 +282,15 @@ function openPanel(nodeId) {
 
   const editLink = document.getElementById('edit-link');
   if (editLink && cfg.repo) {
-    editLink.href = `${cfg.repo}/edit/${cfg.editBranch}/content/${nodeId}.md`;
-    editLink.textContent = 'この記事を編集 (GitHub)';
+    // GitLab (gitlab.com / セルフホスト) は /-/edit/、それ以外は GitHub 形式
+    let isGitLab = false;
+    try {
+      isGitLab = /(^|\.)gitlab(\.|$)/.test(new URL(cfg.repo).hostname);
+    } catch { /* repo が URL でなければ GitHub 形式にフォールバック */ }
+    editLink.href = isGitLab
+      ? `${cfg.repo}/-/edit/${cfg.editBranch}/content/${nodeId}.md`
+      : `${cfg.repo}/edit/${cfg.editBranch}/content/${nodeId}.md`;
+    editLink.textContent = `この記事を編集 (${isGitLab ? 'GitLab' : 'GitHub'})`;
   }
 
   panel?.classList.add('open');
