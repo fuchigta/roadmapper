@@ -40,7 +40,7 @@ content/**/*.md ─▶ content.LoadDir() ─▶ render.RenderMarkdown()
 ## フロントエンド方針
 
 - `web/static/app.js` は素の JavaScript のみ (React/Vue 等のフレームワーク禁止)
-- 目標ファイルサイズ: 30KB 以内
+- 目標ファイルサイズ: 32KB 以内
 - `web/static/style.css` は CSS カスタムプロパティ (変数) ベース
 - ビルド時に HTML へ静的埋め込みできるものは埋め込む (JS は最小限に)
 
