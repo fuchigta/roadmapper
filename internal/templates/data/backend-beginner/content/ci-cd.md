@@ -23,6 +23,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7 # メジャーバージョンは公式リポジトリで最新を確認する
       - run: go test ./...
 ```

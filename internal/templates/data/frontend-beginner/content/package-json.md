@@ -20,6 +20,8 @@ links:
 ```json
 {
   "scripts": { "dev": "vite", "build": "vite build" },
-  "devDependencies": { "vite": "^5.0.0" }
+  "devDependencies": { "vite": "^x.y.z" }
 }
 ```
+
+`^x.y.z` の部分には、`npm install -D vite` を実行したときに自動で書き込まれるバージョンが入ります。

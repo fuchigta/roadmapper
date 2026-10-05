@@ -20,7 +20,8 @@ Docker は、アプリと実行環境を**コンテナ**にまとめて、どこ
 ## ポイント
 
 ```dockerfile
-FROM golang:1.22
+# 実運用では go.mod に合わせたバージョンを指定する
+FROM golang:1
 WORKDIR /app
 COPY . .
 RUN go build -o server .

@@ -17,7 +17,8 @@ Dockerfile はイメージの作り方を記述するファイルです。小さ
 ## ポイント
 
 ```dockerfile
-FROM golang:1.22 AS build
+# 実運用では go.mod に合わせたバージョンを指定する
+FROM golang:1 AS build
 WORKDIR /src
 COPY . .
 RUN go build -o /app .
