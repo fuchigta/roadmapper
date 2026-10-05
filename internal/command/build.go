@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -18,6 +19,9 @@ import (
 	"github.com/fuchigta/roadmapper/internal/render"
 	"github.com/fuchigta/roadmapper/web"
 )
+
+// recentUpdateDays は SVG の「更新」バッジを表示する日数。
+const recentUpdateDays = 30
 
 func NewBuildCmd() *cobra.Command {
 	var (
@@ -95,6 +99,9 @@ func runBuild(configPath, outDir, basePath string) error {
 
 	// ロードマップ → グラフ のマップ (index ページのカード進捗に使う)
 	graphs := map[string]*graph.Graph{}
+	// ロードマップ → 改版履歴のマップ (RSS に使う)
+	logs := map[string]*changelog.Log{}
+	now := time.Now()
 
 	// 各ロードマップを処理
 	for i := range cfg.Roadmaps {
@@ -107,12 +114,21 @@ func runBuild(configPath, outDir, basePath string) error {
 		}
 		graphs[rm.ID] = g
 
-		// 改版履歴を集約 (後続段階で render に渡す)
+		// 改版履歴を集約
 		log, err := changelog.Build(rm.Changelog, resolveNodeDocs(g, docs))
 		if err != nil {
 			return fmt.Errorf("ロードマップ %q の改版履歴の構築に失敗: %w", rm.ID, err)
 		}
-		_ = log
+		logs[rm.ID] = log
+
+		// 最近更新されたノード (SVG 更新バッジ用)
+		recent := changelog.Recent(log.NodeUpdated, now, recentUpdateDays)
+		badges := make(map[string]time.Time, len(recent))
+		for id := range recent {
+			badges[id] = log.NodeUpdated[id]
+		}
+		// TODO(段階 B): RenderRoadmapPage 経由で render.RenderSVGWithBadges に渡す
+		_ = badges
 
 		lr, err := layout.Compute(g, cfg)
 		if err != nil {
@@ -163,7 +179,7 @@ func runBuild(configPath, outDir, basePath string) error {
 	}
 
 	// feed.rss 生成
-	if rssXML, err := meta.RenderRSS(cfg, graphs); err != nil {
+	if rssXML, err := meta.RenderRSS(cfg, graphs, logs); err != nil {
 		return fmt.Errorf("feed.rss の生成に失敗: %w", err)
 	} else if rssXML != "" {
 		if err := os.WriteFile(filepath.Join(outDir, "feed.rss"), []byte(rssXML), 0o644); err != nil {

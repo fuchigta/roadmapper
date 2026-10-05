@@ -4,6 +4,7 @@ package render
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/fuchigta/roadmapper/internal/config"
 	"github.com/fuchigta/roadmapper/internal/graph"
@@ -34,8 +35,14 @@ var nodeColor = map[config.NodeType]struct{ fill, stroke, text string }{
 	config.NodeTypeAlternative: {"#ede9fe", "#6366f1", "#4338ca"},
 }
 
-// RenderSVG は graph g を SVG 文字列に変換する。
+// RenderSVG は更新バッジなしで graph g を SVG 文字列に変換する。
 func RenderSVG(g *graph.Graph, lr *layout.Result, brandColor string) string {
+	return RenderSVGWithBadges(g, lr, brandColor, nil)
+}
+
+// RenderSVGWithBadges は graph g を SVG 文字列に変換する。
+// updated に含まれるノード (ノード ID → 更新日) には「更新」バッジを描く。
+func RenderSVGWithBadges(g *graph.Graph, lr *layout.Result, brandColor string, updated map[string]time.Time) string {
 	w := lr.Width + svgPadding*2
 	h := lr.Height + svgPadding*2
 
@@ -64,7 +71,7 @@ func RenderSVG(g *graph.Graph, lr *layout.Result, brandColor string) string {
 
 	// ノードを描く
 	for _, n := range g.Nodes {
-		renderNode(&sb, n, lr)
+		renderNode(&sb, n, lr, updated)
 	}
 
 	sb.WriteString(`</g></svg>`)
@@ -88,7 +95,7 @@ func buildDefs() string {
 </defs>`
 }
 
-func renderNode(sb *strings.Builder, n *graph.Node, lr *layout.Result) {
+func renderNode(sb *strings.Builder, n *graph.Node, lr *layout.Result, updated map[string]time.Time) {
 	nl, ok := lr.Nodes[n.ID]
 	if !ok {
 		return
@@ -184,6 +191,17 @@ func renderNode(sb *strings.Builder, n *graph.Node, lr *layout.Result) {
 			`<text x="%v" y="%v" text-anchor="middle" dominant-baseline="middle" `+
 				`font-family="system-ui,sans-serif" font-size="8" fill="white">%s</text>`,
 			x+11, y+8, diffLabel)
+	}
+
+	// 更新バッジ (右下。進捗インジケーターは右上、type バッジは右上内側のため重ならない)
+	if d, ok := updated[n.ID]; ok {
+		label := d.Format("2006-01-02") + " 更新"
+		fmt.Fprintf(sb,
+			`<g class="node-updated"><title>%s</title>`+
+				`<rect x="%v" y="%v" width="28" height="14" rx="7" fill="#f97316" stroke="white" stroke-width="1"/>`+
+				`<text x="%v" y="%v" text-anchor="middle" dominant-baseline="middle" `+
+				`font-family="system-ui,sans-serif" font-size="8" font-weight="bold" fill="white">更新</text></g>`,
+			escapeXML(label), x+nl.Width-30, y+nl.Height-7, x+nl.Width-16, y+nl.Height)
 	}
 
 	sb.WriteString(`</g>`)

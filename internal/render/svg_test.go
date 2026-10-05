@@ -3,6 +3,7 @@ package render_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/fuchigta/roadmapper/internal/config"
 	"github.com/fuchigta/roadmapper/internal/graph"
@@ -93,5 +94,32 @@ func TestRenderSVG_noDifficultyBadge(t *testing.T) {
 		if strings.Contains(svg, label) {
 			t.Errorf("SVG should not contain difficulty label %q when difficulty is empty", label)
 		}
+	}
+}
+
+func TestRenderSVGWithBadges_updatedBadge(t *testing.T) {
+	cfg := &config.Config{Site: config.Site{BrandColor: "#4f46e5", Layout: config.Layout{RankDir: "TB", NodeSep: 50, RankSep: 80}}}
+	rm := &config.Roadmap{ID: "r", Title: "R", Nodes: []*config.Node{
+		{ID: "a", Title: "A", Type: config.NodeTypeRequired},
+		{ID: "b", Title: "B", Type: config.NodeTypeRequired},
+	}}
+	g, err := graph.Build(rm)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lr, err := layout.Compute(g, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)
+	got := render.RenderSVGWithBadges(g, lr, cfg.Site.BrandColor, map[string]time.Time{"a": d})
+	if n := strings.Count(got, `class="node-updated"`); n != 1 {
+		t.Errorf("badge count = %d, want 1", n)
+	}
+	if !strings.Contains(got, "<title>2026-09-20 更新</title>") {
+		t.Errorf("missing title in %s", got)
+	}
+	if strings.Contains(render.RenderSVG(g, lr, cfg.Site.BrandColor), "node-updated") {
+		t.Error("RenderSVG should not draw badges")
 	}
 }

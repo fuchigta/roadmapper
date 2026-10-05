@@ -13,6 +13,13 @@ roadmaps:
   - id: frontend
     title: Frontend
     description: ブラウザで動くものを作れるようになるまでの道筋
+    # 改版履歴 (任意)。ノード単位の変更は content/*.md の frontmatter (updated / changes) にも書けます
+    changelog:
+      - date: 2026-09-20
+        summary: HTML の章にフォームとアクセシビリティの説明を追加
+        nodes: [html]
+      - date: 2026-09-01
+        summary: ロードマップを公開
     nodes:
       - id: internet
         title: インターネットの仕組み

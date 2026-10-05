@@ -52,6 +52,8 @@ internal/
     deploy.go                   # roadmapper deploy --target github|gitlab
     init.go                     # roadmapper init
     validate.go                 # roadmapper validate
+  changelog/                    # 改版履歴 (roadmap.yml + frontmatter の集約・検証・Recent 判定)
+    changelog.go                # Build / Check / Recent (純粋関数)
   config/                       # roadmap.yml パーサ + バリデーション
     schema.go                   # Config / Site / Roadmap / Node / Link 構造体
     loader.go                   # Load(path) → *Config

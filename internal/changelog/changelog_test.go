@@ -150,3 +150,26 @@ func TestCheck(t *testing.T) {
 		})
 	}
 }
+
+func TestRecent(t *testing.T) {
+	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
+	d := func(s string) time.Time {
+		v, _ := time.Parse("2006-01-02", s)
+		return v
+	}
+	updated := map[string]time.Time{
+		"today":   d("2026-10-05"),
+		"edge":    d("2026-09-06"),
+		"old":     d("2026-09-05"),
+		"future":  d("2026-10-06"),
+		"ancient": d("2025-01-01"),
+	}
+	got := Recent(updated, now, 30)
+	want := map[string]bool{"today": true, "edge": true}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if len(Recent(nil, now, 30)) != 0 {
+		t.Error("nil input should give empty set")
+	}
+}

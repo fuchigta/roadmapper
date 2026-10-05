@@ -1,4 +1,8 @@
 ---
+updated: 2026-09-20
+changes:
+  - date: 2026-09-20
+    summary: フォームとアクセシビリティのサブタスクを追加
 links:
   - { title: "MDN: HTML の基礎", url: "https://developer.mozilla.org/ja/docs/Learn/Getting_started_with_the_web/HTML_basics" }
   - { title: "HTML Living Standard", url: "https://html.spec.whatwg.org/" }
