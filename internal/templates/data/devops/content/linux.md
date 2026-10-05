@@ -1,8 +1,22 @@
-# Linux の基礎
+---
+links:
+  - { title: "Linux man pages (man7.org)", url: "https://man7.org/linux/man-pages/" }
+  - { title: "GNU Coreutils マニュアル", url: "https://www.gnu.org/software/coreutils/manual/" }
+---
+
+## 学ぶこと
 
 DevOps のすべての土台となるのが Linux の知識です。
+サーバーやコンテナの多くは Linux 上で動くため、基本的なコマンド操作に慣れておきましょう。
 
-## 最低限覚えるべきコマンド
+## サブタスク
+
+- [ ] WSL や VM などで Linux 環境を用意する
+- [ ] ファイル操作・テキスト処理のコマンドを使いこなせる
+- [ ] プロセスの確認と停止ができる
+- [ ] `man` コマンドでヘルプを読む習慣をつける
+
+## ポイント
 
 ```bash
 # ファイル操作
@@ -15,11 +29,5 @@ cat, grep, awk, sed, sort, uniq, wc
 ps, top, kill, nohup
 
 # ネットワーク
-curl, wget, netstat, ss, dig, nslookup
+curl, wget, ss, dig
 ```
-
-## 学習のコツ
-
-1. 実際に Linux 環境 (WSL や VM) を用意して手を動かす
-2. シェルスクリプトで日常タスクを自動化してみる
-3. `man` コマンドでヘルプを読む習慣をつける
