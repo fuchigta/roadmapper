@@ -201,3 +201,18 @@ func Check(entries []config.ChangelogEntry, nodeDocs map[string]*content.Doc, no
 	})
 	return ws
 }
+
+// Recent は updated のうち now から days 日以内 (未来日付は除く) のノード ID の集合を返す。
+func Recent(updated map[string]time.Time, now time.Time, days int) map[string]bool {
+	out := map[string]bool{}
+	limit := time.Duration(days) * 24 * time.Hour
+	for id, d := range updated {
+		if d.After(now) {
+			continue
+		}
+		if now.Sub(d) <= limit {
+			out[id] = true
+		}
+	}
+	return out
+}

@@ -32,7 +32,7 @@ func TestRenderRoadmapPage_changelog(t *testing.T) {
 
 	t.Run("履歴なし", func(t *testing.T) {
 		for _, lg := range []*changelog.Log{nil, {}} {
-			html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nodeHTML, nil, "/", "../", false, lg)
+			html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nodeHTML, nil, "/", "../", false, lg, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -45,7 +45,7 @@ func TestRenderRoadmapPage_changelog(t *testing.T) {
 	})
 
 	t.Run("履歴あり", func(t *testing.T) {
-		html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nodeHTML, nil, "/", "../", false, sampleLog())
+		html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nodeHTML, nil, "/", "../", false, sampleLog(), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -74,7 +74,7 @@ func TestRenderRoadmapPage_changelog(t *testing.T) {
 	})
 
 	t.Run("呼び出し元の nodeHTML を変更しない", func(t *testing.T) {
-		if _, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nodeHTML, nil, "/", "../", false, sampleLog()); err != nil {
+		if _, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nodeHTML, nil, "/", "../", false, sampleLog(), nil); err != nil {
 			t.Fatal(err)
 		}
 		if nodeHTML["a"] != "<p>body</p>" {

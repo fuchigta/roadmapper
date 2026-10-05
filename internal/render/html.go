@@ -40,6 +40,7 @@ func RenderRoadmapPage(
 	assetBase string, // CSS/JS への相対パス (basePath 空なら "../")
 	hasMermaid bool, // mermaid コードブロックがあれば mermaid.js を読み込む
 	log *changelog.Log, // 改版履歴 (nil または空なら履歴 UI を出さない)
+	badges map[string]time.Time, // 更新バッジを付けるノード ID → 更新日 (nil 可)
 ) (string, error) {
 	colors := DeriveColors(cfg.Site.BrandColor)
 
@@ -69,7 +70,7 @@ func RenderRoadmapPage(
 		return "", err
 	}
 
-	svgStr := RenderSVG(g, lr, cfg.Site.BrandColor)
+	svgStr := RenderSVGWithBadges(g, lr, cfg.Site.BrandColor, badges)
 
 	ogpURL := ""
 	if base := meta.SiteBase(cfg.Site.SiteURL, basePath); base != "" {

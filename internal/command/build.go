@@ -20,6 +20,9 @@ import (
 	"github.com/fuchigta/roadmapper/web"
 )
 
+// recentUpdateDays は SVG の「更新」バッジを表示する日数。
+const recentUpdateDays = 30
+
 func NewBuildCmd() *cobra.Command {
 	var (
 		configPath string
@@ -98,6 +101,9 @@ func runBuild(configPath, outDir, basePath string) error {
 	graphs := map[string]*graph.Graph{}
 	// ロードマップ → 最新更新日 (index ページのカードに使う)
 	latest := map[string]time.Time{}
+	// ロードマップ → 改版履歴のマップ (RSS に使う)
+	logs := map[string]*changelog.Log{}
+	now := time.Now()
 
 	// 各ロードマップを処理
 	for i := range cfg.Roadmaps {
@@ -116,6 +122,14 @@ func runBuild(configPath, outDir, basePath string) error {
 			return fmt.Errorf("ロードマップ %q の改版履歴の構築に失敗: %w", rm.ID, err)
 		}
 		latest[rm.ID] = log.Latest
+		logs[rm.ID] = log
+
+		// 最近更新されたノード (SVG 更新バッジ用)
+		recent := changelog.Recent(log.NodeUpdated, now, recentUpdateDays)
+		badges := make(map[string]time.Time, len(recent))
+		for id := range recent {
+			badges[id] = log.NodeUpdated[id]
+		}
 
 		lr, err := layout.Compute(g, cfg)
 		if err != nil {
@@ -135,7 +149,7 @@ func runBuild(configPath, outDir, basePath string) error {
 		}
 
 		pageHTML, err := render.RenderRoadmapPage(
-			web.FS, cfg, rm, g, lr, nodeHTML, nodeText, basePath, assetBase, hasMermaid, log,
+			web.FS, cfg, rm, g, lr, nodeHTML, nodeText, basePath, assetBase, hasMermaid, log, badges,
 		)
 		if err != nil {
 			return fmt.Errorf("ロードマップページの生成に失敗: %w", err)
@@ -166,7 +180,7 @@ func runBuild(configPath, outDir, basePath string) error {
 	}
 
 	// feed.rss 生成
-	if rssXML, err := meta.RenderRSS(cfg, graphs); err != nil {
+	if rssXML, err := meta.RenderRSS(cfg, graphs, logs); err != nil {
 		return fmt.Errorf("feed.rss の生成に失敗: %w", err)
 	} else if rssXML != "" {
 		if err := os.WriteFile(filepath.Join(outDir, "feed.rss"), []byte(rssXML), 0o644); err != nil {
