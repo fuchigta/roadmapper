@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -95,6 +96,8 @@ func runBuild(configPath, outDir, basePath string) error {
 
 	// ロードマップ → グラフ のマップ (index ページのカード進捗に使う)
 	graphs := map[string]*graph.Graph{}
+	// ロードマップ → 最新更新日 (index ページのカードに使う)
+	latest := map[string]time.Time{}
 
 	// 各ロードマップを処理
 	for i := range cfg.Roadmaps {
@@ -107,12 +110,12 @@ func runBuild(configPath, outDir, basePath string) error {
 		}
 		graphs[rm.ID] = g
 
-		// 改版履歴を集約 (後続段階で render に渡す)
+		// 改版履歴を集約
 		log, err := changelog.Build(rm.Changelog, resolveNodeDocs(g, docs))
 		if err != nil {
 			return fmt.Errorf("ロードマップ %q の改版履歴の構築に失敗: %w", rm.ID, err)
 		}
-		_ = log
+		latest[rm.ID] = log.Latest
 
 		lr, err := layout.Compute(g, cfg)
 		if err != nil {
@@ -132,7 +135,7 @@ func runBuild(configPath, outDir, basePath string) error {
 		}
 
 		pageHTML, err := render.RenderRoadmapPage(
-			web.FS, cfg, rm, g, lr, nodeHTML, nodeText, basePath, assetBase, hasMermaid,
+			web.FS, cfg, rm, g, lr, nodeHTML, nodeText, basePath, assetBase, hasMermaid, log,
 		)
 		if err != nil {
 			return fmt.Errorf("ロードマップページの生成に失敗: %w", err)
@@ -144,7 +147,7 @@ func runBuild(configPath, outDir, basePath string) error {
 	}
 
 	// index.html 生成
-	indexHTML, err := render.RenderIndexPage(web.FS, cfg, basePath, graphs)
+	indexHTML, err := render.RenderIndexPage(web.FS, cfg, basePath, graphs, latest)
 	if err != nil {
 		return fmt.Errorf("インデックスページの生成に失敗: %w", err)
 	}

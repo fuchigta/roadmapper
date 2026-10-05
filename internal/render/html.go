@@ -5,7 +5,9 @@ import (
 	"html/template"
 	"io/fs"
 	"strings"
+	"time"
 
+	"github.com/fuchigta/roadmapper/internal/changelog"
 	"github.com/fuchigta/roadmapper/internal/config"
 	"github.com/fuchigta/roadmapper/internal/graph"
 	"github.com/fuchigta/roadmapper/internal/layout"
@@ -37,8 +39,25 @@ func RenderRoadmapPage(
 	basePath string,
 	assetBase string, // CSS/JS への相対パス (basePath 空なら "../")
 	hasMermaid bool, // mermaid コードブロックがあれば mermaid.js を読み込む
+	log *changelog.Log, // 改版履歴 (nil または空なら履歴 UI を出さない)
 ) (string, error) {
 	colors := DeriveColors(cfg.Site.BrandColor)
+
+	titles := nodeTitles(g)
+	hasLog := log != nil && len(log.Items) > 0
+	if hasLog {
+		// ノード記事の末尾に履歴セクションを静的に付与する (呼び出し元の map は変更しない)
+		withHist := make(map[string]string, len(nodeHTML))
+		for id, h := range nodeHTML {
+			withHist[id] = h
+		}
+		for _, n := range g.Nodes {
+			if sec := renderNodeHistory(log, n.ID, titles); sec != "" {
+				withHist[n.ID] += sec
+			}
+		}
+		nodeHTML = withHist
+	}
 
 	nodeMeta, nodeOrder := buildNodeMeta(g, nodeHTML, nodeText)
 	nodeDataJSON, err := json.Marshal(nodeMeta)
@@ -58,6 +77,7 @@ func RenderRoadmapPage(
 	}
 
 	tmplData := map[string]any{
+		"HasChangelog":     hasLog,
 		"Site":             cfg.Site,
 		"Roadmap":          rm,
 		"SVG":              template.HTML(svgStr),
@@ -77,6 +97,11 @@ func RenderRoadmapPage(
 		"ChromaCSS":        template.CSS(ChromaCSS()),
 	}
 
+	if hasLog {
+		tmplData["LatestDate"], tmplData["LatestText"] = latestLine(log, titles)
+		tmplData["PanelHistory"] = renderPanelHistory(log, titles)
+	}
+
 	return renderTemplate(webFS, "templates/roadmap.html", tmplData)
 }
 
@@ -87,6 +112,7 @@ func RenderIndexPage(
 	cfg *config.Config,
 	basePath string,
 	graphs map[string]*graph.Graph,
+	latest map[string]time.Time, // ロードマップID → 最新更新日 (zero または未登録なら表示しない)
 ) (string, error) {
 	colors := DeriveColors(cfg.Site.BrandColor)
 
@@ -109,7 +135,15 @@ func RenderIndexPage(
 		rssURL = base + "feed.rss"
 	}
 
+	latestStr := map[string]string{}
+	for id, t := range latest {
+		if !t.IsZero() {
+			latestStr[id] = formatDate(t)
+		}
+	}
+
 	tmplData := map[string]any{
+		"Latest":           latestStr,
 		"Site":             cfg.Site,
 		"Roadmaps":         cfg.Roadmaps,
 		"BrandColor":       colors.Base,

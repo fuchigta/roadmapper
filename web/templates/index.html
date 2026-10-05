@@ -35,6 +35,7 @@
       <a href="{{$.BasePath}}{{.ID}}/index.html" class="roadmap-card">
         <h2>{{.Title}}</h2>
         {{if .Description}}<p>{{.Description}}</p>{{end}}
+        {{with index $.Latest .ID}}<p class="card-updated">最終更新: <time>{{.}}</time></p>{{end}}
         <div class="card-progress" data-roadmap="{{.ID}}">
           <div class="progress-bar"></div>
           <span class="progress-label">0%</span>

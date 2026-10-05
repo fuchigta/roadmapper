@@ -248,10 +248,30 @@ function renderRelations(nodeId) {
   makeItems(data.children || [], childrenList);
 }
 
+// 履歴モード: ノード記事の代わりにビルド時埋め込みの全履歴を表示する (ノード専用 UI は CSS で隠す)
+const HISTORY_HASH = ':changelog';
+function openHistory() {
+  const tpl = document.getElementById('changelog-tpl');
+  if (!tpl) return;
+  currentNodeId = null;
+  clearHighlights();
+  panel?.classList.add('history-mode');
+  document.getElementById('panel-title').textContent = '更新履歴';
+  const content = document.getElementById('panel-content');
+  content.innerHTML = tpl.innerHTML;
+  content.scrollTop = 0;
+  if (panel) panel.scrollTop = 0;
+  panel?.classList.add('open');
+  panel?.removeAttribute('aria-hidden');
+  overlay?.classList.add('show');
+  history.replaceState(null, '', '#' + HISTORY_HASH);
+}
+
 function openPanel(nodeId) {
-  currentNodeId = nodeId;
   const data = nodeData[nodeId];
   if (!data) return;
+  currentNodeId = nodeId;
+  panel?.classList.remove('history-mode');
 
   document.getElementById('panel-title').textContent = data.title;
 
@@ -493,7 +513,7 @@ function initKeyboard() {
     }
 
     // Escape でパネルを閉じる
-    if (e.key === 'Escape' && currentNodeId) {
+    if (e.key === 'Escape' && panel?.classList.contains('open')) {
       closePanel();
       return;
     }
@@ -820,6 +840,13 @@ document.addEventListener('DOMContentLoaded', () => {
     el.addEventListener('click', () => openPanel(el.dataset.id));
   });
 
+  // 更新履歴 (ボタン / 履歴内のノードリンク)
+  document.getElementById('changelog-btn')?.addEventListener('click', openHistory);
+  document.getElementById('panel-content')?.addEventListener('click', e => {
+    const a = e.target.closest?.('a[data-node]');
+    if (a) { e.preventDefault(); openPanel(a.dataset.node); }
+  });
+
   // パネル閉じる
   document.getElementById('panel-close')?.addEventListener('click', closePanel);
   overlay?.addEventListener('click', closePanel);
@@ -857,6 +884,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (location.hash) {
     const id = location.hash.slice(1);
     if (nodeData[id]) openPanel(id);
+    else if (id === HISTORY_HASH) openHistory();
   }
 
   // index ページのカード進捗とバックエンド同期

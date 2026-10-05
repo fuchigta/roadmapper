@@ -33,6 +33,12 @@
     <div class="roadmap-header">
       <h1>{{.Roadmap.Title}}</h1>
       {{if .Roadmap.Description}}<p class="roadmap-desc">{{.Roadmap.Description}}</p>{{end}}
+      {{if .HasChangelog}}
+      <div class="changelog-latest">
+        <span class="changelog-latest-text"><time>{{.LatestDate}}</time> 更新: {{.LatestText}}</span>
+        <button id="changelog-btn" type="button" class="changelog-btn">更新履歴</button>
+      </div>
+      {{end}}
       <div class="progress-bar-wrap">
         <div class="progress-bar" id="progress-bar"></div>
         <span class="progress-label" id="progress-label">0%</span>
@@ -90,6 +96,7 @@
     </div>
   </aside>
   <div id="overlay" class="overlay"></div>
+  {{if .HasChangelog}}<template id="changelog-tpl">{{.PanelHistory}}</template>{{end}}
 
   <script>
     window.ROADMAP_DATA = Object.assign({{.NodeDataJSON}}, {__order: {{.NodeOrderJSON}}});
