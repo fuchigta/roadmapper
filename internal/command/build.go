@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/fuchigta/roadmapper/internal/changelog"
 	"github.com/fuchigta/roadmapper/internal/config"
 	"github.com/fuchigta/roadmapper/internal/content"
 	"github.com/fuchigta/roadmapper/internal/graph"
@@ -105,6 +106,13 @@ func runBuild(configPath, outDir, basePath string) error {
 			return fmt.Errorf("ロードマップ %q のグラフ構築に失敗: %w", rm.ID, err)
 		}
 		graphs[rm.ID] = g
+
+		// 改版履歴を集約 (後続段階で render に渡す)
+		log, err := changelog.Build(rm.Changelog, resolveNodeDocs(g, docs))
+		if err != nil {
+			return fmt.Errorf("ロードマップ %q の改版履歴の構築に失敗: %w", rm.ID, err)
+		}
+		_ = log
 
 		lr, err := layout.Compute(g, cfg)
 		if err != nil {

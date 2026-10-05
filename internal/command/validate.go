@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/fuchigta/roadmapper/internal/changelog"
 	"github.com/fuchigta/roadmapper/internal/config"
 	"github.com/fuchigta/roadmapper/internal/content"
 	"github.com/fuchigta/roadmapper/internal/graph"
@@ -31,7 +33,7 @@ func NewValidateCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&configPath, "config", "c", "roadmap.yml",
 		"設定ファイルのパス")
 	cmd.Flags().BoolVar(&strict, "strict", false,
-		"content/*.md が見つからないノードがあればエラーで終了する")
+		"content/*.md が見つからないノードや改版履歴の警告があればエラーで終了する")
 
 	return cmd
 }
@@ -96,6 +98,33 @@ func runValidate(configPath string, strict bool) error {
 		if strict {
 			return fmt.Errorf("--strict 指定のため content 未解決を理由に失敗します")
 		}
+	}
+
+	// 改版履歴の検証 (日付パース失敗はエラー、整合性の問題は警告)
+	now := time.Now()
+	changelogWarnings := 0
+	for i, g := range graphs {
+		rm := &cfg.Roadmaps[i]
+		nodeDocs := resolveNodeDocs(g, docs)
+		if _, err := changelog.Build(rm.Changelog, nodeDocs); err != nil {
+			return fmt.Errorf("ロードマップ %q の改版履歴が不正: %w", rm.ID, err)
+		}
+		ws := changelog.Check(rm.Changelog, nodeDocs, now)
+		if len(ws) == 0 {
+			continue
+		}
+		changelogWarnings += len(ws)
+		fmt.Fprintf(os.Stderr, "warning: [%s] 改版履歴に %d 件の注意があります:\n", rm.ID, len(ws))
+		for _, w := range ws {
+			if w.NodeID != "" {
+				fmt.Fprintf(os.Stderr, "  - %s: %s\n", w.NodeID, w.Message)
+			} else {
+				fmt.Fprintf(os.Stderr, "  - %s\n", w.Message)
+			}
+		}
+	}
+	if strict && changelogWarnings > 0 {
+		return fmt.Errorf("--strict 指定のため改版履歴の警告を理由に失敗します")
 	}
 
 	fmt.Printf("✓ %s の検証が完了しました (%d ロードマップ, content 解決済み %d / %d ノード)\n",

@@ -89,7 +89,19 @@ type Roadmap struct {
 	Title       string  `yaml:"title"`
 	Description string  `yaml:"description"`
 	Nodes       []*Node `yaml:"nodes"`
+	// Changelog はロードマップ全体の改版履歴 (任意)。
+	Changelog []ChangelogEntry `yaml:"changelog"`
 }
+
+// ChangelogEntry は改版履歴の 1 項目。
+type ChangelogEntry struct {
+	Date    string   `yaml:"date"` // "2006-01-02" 形式
+	Summary string   `yaml:"summary"`
+	Nodes   []string `yaml:"nodes"` // 関連ノード ID (任意)
+}
+
+// ChangelogDateLayout は改版履歴の日付フォーマット。
+const ChangelogDateLayout = "2006-01-02"
 
 // Config は roadmap.yml 全体のルート構造体。
 type Config struct {

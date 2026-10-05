@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 // ValidationError は1件のバリデーションエラーを表す。
@@ -57,6 +58,7 @@ func Validate(cfg *Config) error {
 		nodeIDs := map[string]bool{}
 		collectNodeIDs(rm.Nodes, nodeIDs)
 		validateNodes(rm.Nodes, nodeIDs, prefix+".nodes", &errs)
+		validateChangelog(rm, nodeIDs, &errs)
 	}
 
 	ps := cfg.Site.ProgressSync
@@ -100,6 +102,28 @@ func validatePanel(p Panel, errs *ValidationErrors) {
 	}
 	if p.MinWidth > 0 && p.MaxWidth > 0 && p.MinWidth > p.MaxWidth {
 		*errs = append(*errs, ValidationError{"site.panel.minWidth", "minWidth は maxWidth 以下にしてください"})
+	}
+}
+
+func validateChangelog(rm Roadmap, nodeIDs map[string]bool, errs *ValidationErrors) {
+	for i, e := range rm.Changelog {
+		p := fmt.Sprintf("roadmaps[%s].changelog[%d]", rm.ID, i)
+		if e.Date == "" {
+			*errs = append(*errs, ValidationError{p + ".date", "date は必須です"})
+		} else if _, err := time.Parse(ChangelogDateLayout, e.Date); err != nil {
+			*errs = append(*errs, ValidationError{p + ".date", fmt.Sprintf("日付 %q を YYYY-MM-DD 形式で指定してください", e.Date)})
+		}
+		if strings.TrimSpace(e.Summary) == "" {
+			*errs = append(*errs, ValidationError{p + ".summary", "summary は必須です"})
+		}
+		for ni, id := range e.Nodes {
+			if !nodeIDs[id] {
+				*errs = append(*errs, ValidationError{
+					fmt.Sprintf("%s.nodes[%d]", p, ni),
+					fmt.Sprintf("ノード %q がこのロードマップに存在しません", id),
+				})
+			}
+		}
 	}
 }
 

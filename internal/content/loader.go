@@ -17,6 +17,16 @@ import (
 type Frontmatter struct {
 	Title string `yaml:"title"` // 省略可 (roadmap.yml を正とする)
 	Links []Link `yaml:"links"`
+	// Updated はノードの最終更新日 ("2006-01-02")。
+	Updated string `yaml:"updated"`
+	// Changes はノード単位の改版履歴。
+	Changes []Change `yaml:"changes"`
+}
+
+// Change はノード frontmatter の改版履歴 1 項目。
+type Change struct {
+	Date    string `yaml:"date"`
+	Summary string `yaml:"summary"`
 }
 
 // Link は参考資料リンク。
