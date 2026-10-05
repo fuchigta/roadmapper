@@ -181,3 +181,33 @@ func TestValidate_unknownParent(t *testing.T) {
 		t.Fatal("expected error for unknown parent")
 	}
 }
+
+func TestValidate_panel(t *testing.T) {
+	tests := []struct {
+		name    string
+		panel   config.Panel
+		wantErr bool
+	}{
+		{"未設定", config.Panel{}, false},
+		{"既定値", config.Panel{Width: 520, MinWidth: 320, MaxWidth: 960}, false},
+		{"境界値が等しい", config.Panel{Width: 400, MinWidth: 400, MaxWidth: 400}, false},
+		{"負の width", config.Panel{Width: -1, MinWidth: 320, MaxWidth: 960}, true},
+		{"負の minWidth", config.Panel{Width: 520, MinWidth: -320, MaxWidth: 960}, true},
+		{"負の maxWidth", config.Panel{Width: 520, MinWidth: 320, MaxWidth: -1}, true},
+		{"minWidth > width", config.Panel{Width: 300, MinWidth: 320, MaxWidth: 960}, true},
+		{"width > maxWidth", config.Panel{Width: 1000, MinWidth: 320, MaxWidth: 960}, true},
+		{"minWidth > maxWidth", config.Panel{Width: 0, MinWidth: 1000, MaxWidth: 960}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				Site:     config.Site{Title: "T", Panel: tt.panel},
+				Roadmaps: []config.Roadmap{{ID: "r1", Title: "R1"}},
+			}
+			err := config.Validate(cfg)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

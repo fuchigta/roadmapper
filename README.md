@@ -115,6 +115,10 @@ site:
   editBranch: main
   basePath: ""                         # GH Pages サブパス用 (例: /my-repo/)
   siteUrl: ""                          # 公開 URL (sitemap.xml / RSS / OGP 用)
+  panel:                               # 記事サイドパネルの幅 (px)
+    width: 520                         # 初期幅
+    minWidth: 320                      # 最小幅
+    maxWidth: 960                      # 最大幅 (画面幅の 80% も上限)
   layout:
     rankDir: TB                        # TB / LR / BT / RL
     nodeSep: 50

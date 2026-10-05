@@ -13,6 +13,7 @@ type Site struct {
 	SiteURL       string        `yaml:"siteUrl"` // 公開URL (sitemap/RSS/OGP 用, 例: https://example.com)
 	Layout        Layout        `yaml:"layout"`
 	ProgressSync  ProgressSync  `yaml:"progressSync"`
+	Panel         Panel         `yaml:"panel"`
 	ContentAssets ContentAssets `yaml:"contentAssets"`
 }
 
@@ -28,6 +29,13 @@ type Layout struct {
 	RankDir string  `yaml:"rankDir"` // TB / LR / BT / RL
 	NodeSep float64 `yaml:"nodeSep"`
 	RankSep float64 `yaml:"rankSep"`
+}
+
+// Panel は記事サイドパネルの幅設定 (単位: px)。
+type Panel struct {
+	Width    int `yaml:"width"`    // 初期幅 (既定 520)
+	MinWidth int `yaml:"minWidth"` // 最小幅 (既定 320)
+	MaxWidth int `yaml:"maxWidth"` // 最大幅 (既定 960)
 }
 
 // ProgressSync は進捗バックエンド同期の設定。

@@ -124,14 +124,19 @@ let currentNodeId = null;
 
 // ===== Panel resize =====
 const PANEL_WIDTH_KEY = 'roadmapper:panel-width';
-const PANEL_MIN = 320;
-function panelMax() { return Math.min(window.innerWidth * 0.8, 960); }
+function cssPx(name, fallback) {
+  const v = parseInt(getComputedStyle(panel).getPropertyValue(name), 10);
+  return isNaN(v) ? fallback : v;
+}
+function panelMin() { return cssPx('--panel-min', 320); }
+function panelMax() { return Math.min(window.innerWidth * 0.8, cssPx('--panel-max', 960)); }
+function clampPanel(w) { return Math.max(panelMin(), Math.min(w, panelMax())); }
 
 function applySavedPanelWidth() {
   if (!panel || window.innerWidth <= 600) return;
   const saved = parseInt(localStorage.getItem(PANEL_WIDTH_KEY) || '', 10);
   if (!isNaN(saved)) {
-    panel.style.width = Math.max(PANEL_MIN, Math.min(saved, panelMax())) + 'px';
+    panel.style.width = clampPanel(saved) + 'px';
   }
 }
 
@@ -154,7 +159,7 @@ function initPanelResize() {
   resizer.addEventListener('pointermove', (e) => {
     if (!resizer.classList.contains('dragging')) return;
     const delta = startX - e.clientX;
-    const newWidth = Math.max(PANEL_MIN, Math.min(startWidth + delta, panelMax()));
+    const newWidth = clampPanel(startWidth + delta);
     panel.style.width = newWidth + 'px';
   });
 
@@ -168,6 +173,10 @@ function initPanelResize() {
 
 applySavedPanelWidth();
 initPanelResize();
+window.addEventListener('resize', () => {
+  if (!panel || window.innerWidth <= 600 || !panel.style.width) return;
+  panel.style.width = clampPanel(parseInt(panel.style.width, 10)) + 'px';
+});
 
 // ===== 依存関係ハイライト =====
 function highlightRelations(nodeId) {

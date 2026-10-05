@@ -352,8 +352,8 @@ a { color: var(--brand); }
   top: var(--header-h);
   right: 0;
   width: var(--panel-width);
-  min-width: 320px;
-  max-width: min(80vw, 960px);
+  min-width: var(--panel-min, 320px);
+  max-width: min(80vw, var(--panel-max, 960px));
   height: calc(100vh - var(--header-h));
   background: var(--bg);
   border-left: 1px solid var(--border);

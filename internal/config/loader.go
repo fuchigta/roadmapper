@@ -39,6 +39,21 @@ func applyDefaults(cfg *Config) {
 	if cfg.Site.Layout.RankSep == 0 {
 		cfg.Site.Layout.RankSep = 80
 	}
+	// 未指定の項目は、指定済みの値と矛盾しないよう既定値を範囲内に収めて補完する
+	p := &cfg.Site.Panel
+	if p.MaxWidth == 0 {
+		p.MaxWidth = max(960, p.Width, p.MinWidth)
+	}
+	if p.MinWidth == 0 {
+		p.MinWidth = 320
+		if p.Width > 0 {
+			p.MinWidth = min(p.MinWidth, p.Width)
+		}
+		p.MinWidth = min(p.MinWidth, p.MaxWidth)
+	}
+	if p.Width == 0 {
+		p.Width = min(max(520, p.MinWidth), p.MaxWidth)
+	}
 
 	for ri := range cfg.Roadmaps {
 		applyNodeDefaults(cfg.Roadmaps[ri].Nodes)

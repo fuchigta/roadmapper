@@ -68,10 +68,39 @@ func Validate(cfg *Config) error {
 		}
 	}
 
+	validatePanel(cfg.Site.Panel, &errs)
+
 	if len(errs) > 0 {
 		return errs
 	}
 	return nil
+}
+
+// validatePanel はパネル幅設定を検査する。0 は未設定 (applyDefaults で補完される) として扱う。
+func validatePanel(p Panel, errs *ValidationErrors) {
+	fields := []struct {
+		name string
+		v    int
+	}{{"width", p.Width}, {"minWidth", p.MinWidth}, {"maxWidth", p.MaxWidth}}
+	valid := true
+	for _, f := range fields {
+		if f.v < 0 {
+			*errs = append(*errs, ValidationError{"site.panel." + f.name, "正の値 (px) を指定してください"})
+			valid = false
+		}
+	}
+	if !valid {
+		return
+	}
+	if p.MinWidth > 0 && p.Width > 0 && p.MinWidth > p.Width {
+		*errs = append(*errs, ValidationError{"site.panel.minWidth", "minWidth は width 以下にしてください"})
+	}
+	if p.Width > 0 && p.MaxWidth > 0 && p.Width > p.MaxWidth {
+		*errs = append(*errs, ValidationError{"site.panel.width", "width は maxWidth 以下にしてください"})
+	}
+	if p.MinWidth > 0 && p.MaxWidth > 0 && p.MinWidth > p.MaxWidth {
+		*errs = append(*errs, ValidationError{"site.panel.minWidth", "minWidth は maxWidth 以下にしてください"})
+	}
 }
 
 func collectNodeIDs(nodes []*Node, ids map[string]bool) {

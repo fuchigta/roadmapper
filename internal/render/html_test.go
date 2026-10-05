@@ -111,3 +111,19 @@ func TestRenderIndexPage_progressSyncDisabled(t *testing.T) {
 		t.Errorf("expected enabled:false in index SITE_CONFIG")
 	}
 }
+
+func TestRenderRoadmapPage_panelStyle(t *testing.T) {
+	cfg, g, lr := buildMinimalPageFixture(t)
+	cfg.Site.Panel = config.Panel{Width: 600, MinWidth: 350, MaxWidth: 900}
+	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false)
+	if err != nil {
+		t.Fatalf("RenderRoadmapPage: %v", err)
+	}
+	want := `style="--panel-width:600px;--panel-min:350px;--panel-max:900px"`
+	if !strings.Contains(html, want) {
+		t.Errorf("expected %s in aside", want)
+	}
+	if strings.Contains(html, "ZgotmplZ") {
+		t.Errorf("unexpected ZgotmplZ in output")
+	}
+}
