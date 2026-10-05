@@ -95,9 +95,6 @@ func runValidate(configPath string, strict bool) error {
 				fmt.Fprintf(os.Stderr, "  - [%s] %s\n", e.roadmapID, e.nodeID)
 			}
 		}
-		if strict {
-			return fmt.Errorf("--strict 指定のため content 未解決を理由に失敗します")
-		}
 	}
 
 	// 改版履歴の検証 (日付パース失敗はエラー、整合性の問題は警告)
@@ -123,8 +120,10 @@ func runValidate(configPath string, strict bool) error {
 			}
 		}
 	}
-	if strict && changelogWarnings > 0 {
-		return fmt.Errorf("--strict 指定のため改版履歴の警告を理由に失敗します")
+	// 全警告を出し終えてから --strict 判定する
+	if strict && (len(unresolved) > 0 || changelogWarnings > 0) {
+		return fmt.Errorf("--strict 指定のため警告 (content 未解決 %d 件, 改版履歴 %d 件) を理由に失敗します",
+			len(unresolved), changelogWarnings)
 	}
 
 	fmt.Printf("✓ %s の検証が完了しました (%d ロードマップ, content 解決済み %d / %d ノード)\n",
