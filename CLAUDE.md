@@ -74,6 +74,7 @@ internal/
     markdown.go                 # RenderMarkdown(body) → HTML string (goldmark + chroma)
     links.go                    # RenderLinks([]Link) → HTML fragment
     theme.go                    # DeriveColors(hex) → {Base, Light}
+    analytics.go                # RenderAnalyticsHead(Analytics) → <head> 用解析タグ
   server/                       # dev サーバ
     server.go                   # HTTP server + SSE + livereload script injection
   templates/                    # init コマンド用スケルトン
@@ -126,6 +127,12 @@ web/                            # ビルド時埋め込みアセット
 - マージ規則: ノードごとに「進んでいる方」を採用。`STATE_RANK`: none(0) < in-progress(1) < skipped/done(2)、同ランクは done 優先
 - オフライン時は `roadmapper:sync-dirty:{roadmapId}` フラグを立て、`online` イベントまたは次回ロード時に再送
 - シェアビュー (`?p=...`) では同期を行わない
+
+### アクセス解析 (`site.analytics`)
+- `provider` (umami / plausible / goatcounter / custom) が空なら無効。`render.RenderAnalyticsHead` が `<head>` 用タグを生成する (属性は `html/template` でエスケープ、custom の `head` のみ素通し)
+- アダプタ方式: provider ごとに `window.roadmapperTrack(name, data)` を head で定義し、`app.js` は `track()` 経由でのみ呼ぶ。`SITE_CONFIG.analyticsEvents` が false なら何も送らず、例外は握りつぶす
+- イベント: `node_open` / `node_state` / `share` / `outbound`。**deviceId・進捗データ・`?p=` の値は送らない**。シェアビューでは `node_state` を送らない
+- `roadmapper dev` は常に解析を無効化 (`runBuild` の `noAnalytics`)、`build --no-analytics` でも無効化できる
 
 ## 禁止事項
 
