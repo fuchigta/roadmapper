@@ -14,6 +14,7 @@
 roadmap.yml ──▶ config.Load() ──▶ graph.Build() ──▶ layout.Compute()
                                                             │
 content/**/*.md ─▶ content.LoadDir() ─▶ render.RenderMarkdown()
+                    └▶ changelog.Build() (roadmap.yml の changelog + frontmatter)
                                                             │
                                               render.RenderSVG()
                                               render.RenderRoadmapPage()
@@ -31,6 +32,7 @@ content/**/*.md ─▶ content.LoadDir() ─▶ render.RenderMarkdown()
 |---|---|---|
 | `internal/config` | YAML 読み込みと検証のみ | ファイル出力、ネットワーク |
 | `internal/graph` | DAG 構築と検証のみ | 座標計算、レンダリング |
+| `internal/changelog` | 改版履歴の集約・整合性チェック・Recent 判定 (純粋関数) | ファイル出力、HTML 生成 |
 | `internal/layout` | 座標計算のみ | ファイル出力、HTML 生成 |
 | `internal/render` | 文字列生成のみ | ファイル出力、ネットワーク |
 | `internal/meta` | XML 文字列生成のみ | ファイル出力 |
@@ -48,6 +50,6 @@ content/**/*.md ─▶ content.LoadDir() ─▶ render.RenderMarkdown()
 
 将来の拡張を想定した設計箇所:
 - `config.Site.Layout` — dagre パラメータを公開している (rankDir, nodeSep, rankSep)
-- `config.Node.X`, `config.Node.Y` — 手動座標オーバーライド
-- `config.Site.SiteURL` — OGP/sitemap/RSS は siteUrl が空なら生成しない (オプション機能)
+- `config.Node.X`, `config.Node.Y` — 手動座標オーバーライド (実装済み。片方のみの指定も可)
+- `config.Site.SiteURL` — sitemap/RSS は siteUrl が空なら生成しない。OGP は og:url のみ siteUrl 依存 (オプション機能)
 - `content.Doc.Frontmatter.Links` — frontmatter のリンクが roadmap.yml より優先される
