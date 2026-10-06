@@ -6,10 +6,11 @@ links:
 ## deploy コマンドの実行
 
 ```bash
-roadmapper deploy --target github -c my-roadmap/roadmap.yml
+roadmapper deploy --target github              # 現在のブランチを対象にする
+roadmapper deploy --target github --branch master  # ブランチを明示する
 ```
 
-`.github/workflows/pages.yml` が生成されます。
+`.github/workflows/pages.yml` が生成されます。トリガーのブランチは `--branch` / `-b` で指定したもの、未指定ならカレントリポジトリの現在のブランチ (`.git/HEAD` から取得。detached HEAD や取得失敗時は `main` にフォールバックし、その旨を表示) になります。
 
 ## 生成されるワークフロー
 
@@ -17,7 +18,7 @@ roadmapper deploy --target github -c my-roadmap/roadmap.yml
 name: Deploy to GitHub Pages
 on:
   push:
-    branches: [main]
+    branches: [main]   # 実際は --branch または現在のブランチ名
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest

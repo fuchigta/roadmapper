@@ -49,7 +49,7 @@ internal/
   command/                      # CLI サブコマンド実装
     build.go                    # roadmapper build
     dev.go                      # roadmapper dev (fsnotify + SSE livereload)
-    deploy.go                   # roadmapper deploy --target github|gitlab
+    deploy.go                   # roadmapper deploy --target github|gitlab [--branch]
     init.go                     # roadmapper init
     validate.go                 # roadmapper validate
   changelog/                    # 改版履歴 (roadmap.yml + frontmatter の集約・検証・Recent 判定)
@@ -68,6 +68,8 @@ internal/
   meta/                         # OGP / sitemap / RSS
     sitemap.go                  # RenderSitemap(*Config) → XML string
     rss.go                      # RenderRSS(*Config, graphs) → XML string
+  repo/                         # .git 探索 (リポジトリルート検出 / 現在ブランチ読み取り、外部コマンド不使用)
+    repo.go                     # FindRoot / PathPrefix / CurrentBranch
   render/                       # HTML / SVG / Markdown レンダリング
     svg.go                      # RenderSVG(*Graph, *Result, brandColor) → SVG string
     html.go                     # RenderRoadmapPage / RenderIndexPage → HTML string
@@ -108,6 +110,15 @@ web/                            # ビルド時埋め込みアセット
 ### Mermaid パススルー
 - goldmark の AST レンダラーは登録しない。Markdown → HTML 後に正規表現で後処理する
 - `render/markdown.go` の `mermaidBlockRe` 参照
+
+### 「この記事を編集」リンク (`editPath`)
+- ビルド時に command 層 (`buildEditPaths`) が各ノードの記事のリポジトリルート相対パスを算出し、`NodeMeta.EditPath` → `ROADMAP_DATA[nodeId].editPath` で app.js に渡す
+- 実ファイルは `content.Doc.RelPath` (content/ 起点・拡張子込み)、リポジトリ prefix は `repo.PathPrefix(configDir)` (`.git` ディレクトリ/ファイルを上位探索。無ければ空)
+- 記事未作成ノードは `<prefix>content/<content or id>.md` (新規作成先の推定) を出す
+
+### deploy の対象ブランチ
+- `--branch/-b` 優先、未指定なら `repo.CurrentBranch` で `.git/HEAD` を読む (worktree/submodule の `gitdir:` も辿る)。detached HEAD・取得失敗時は `main` にフォールバックして表示
+- ブランチ名は `[A-Za-z0-9._/-]+` のみ許可 (CI の YAML へそのまま埋め込むため)
 
 ### チェックリストの `disabled` 属性
 - goldmark GFM タスクリストは `<input disabled="">` を生成する
@@ -150,7 +161,7 @@ web/                            # ビルド時埋め込みアセット
 - 各 `internal/` パッケージにユニットテストを置く
 - ゴールデンファイルテストは `testdata/` ディレクトリに配置
 - `go test ./...` がすべて通ること
-- `internal/command/` にはテストファイルなし (統合テストは手動確認)
+- `internal/command/` の統合テストは手動確認。純粋なヘルパ (`buildEditPaths`, `resolveBranch`) のみユニットテストあり
 
 ## 依存ライブラリ
 

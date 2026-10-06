@@ -100,6 +100,12 @@ roadmapper deploy --target github   # .github/workflows/pages.yml を生成
 roadmapper deploy --target gitlab   # .gitlab-ci.yml を生成
 ```
 
+対象ブランチは `--branch` / `-b` で指定できます。未指定なら `.git/HEAD` から現在のブランチを読み取り (detached HEAD や取得失敗時は `main` にフォールバックして表示)、生成時にどのブランチを使ったか表示します。
+
+```bash
+roadmapper deploy --target github --branch master   # master ブランチの push で起動
+```
+
 既存ファイルがある場合は diff を表示して上書き確認します。
 
 ## `roadmap.yml` リファレンス
@@ -111,8 +117,8 @@ site:
   brandColor: "#4f46e5"               # アクセントカラー (CSS 変数に自動派生)
   author: your-name
   license: CC-BY-4.0
-  repo: https://github.com/you/repo   # "この記事を編集" リンクに使用
-  editBranch: main
+  repo: https://github.com/you/repo   # "この記事を編集" リンクに使用 (記事の実パスはビルド時に自動解決)
+  editBranch: main                     # 編集リンクのブランチ名 (既定: main。master 等なら変更)
   basePath: ""                         # GH Pages サブパス用 (例: /my-repo/)
   siteUrl: ""                          # 公開 URL (sitemap.xml / RSS / OGP 用)
   panel:                               # 記事サイドパネルの幅 (px)

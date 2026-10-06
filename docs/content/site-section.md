@@ -23,7 +23,7 @@ site:
 | `brandColor` | 任意 | HEX 6 桁 (例: `#3b82f6`)。未設定時はデフォルトカラー |
 | `author` | 任意 | フッターに表示される著者名 |
 | `repo` | 任意 | 設定するとヘッダーにリポジトリリンクが表示される |
-| `editBranch` | 任意 | `repo` と組み合わせて各ノードの「このページを編集」リンクを生成 |
+| `editBranch` | 任意 | `repo` と組み合わせて各ノードの「この記事を編集」リンクを生成。ブランチ名 (既定 `main`)。記事の実ファイルパスはビルド時に `.git` を探索して自動解決される (`content:` 指定・サブディレクトリ・`docs/` 配下の roadmap.yml に対応) |
 | `basePath` | 任意 | GitHub Pages のリポジトリサブディレクトリ (例: `/my-repo/`) |
 | `siteUrl` | 任意 | 設定すると `sitemap.xml` と `feed.rss` が生成される |
 

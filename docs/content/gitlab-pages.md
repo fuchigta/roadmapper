@@ -22,7 +22,7 @@ pages:
   artifacts:
     paths:
       - public
-  only:
+  only:   # 実際は --branch または現在のブランチ名 (例: master)
     - main
 ```
 
