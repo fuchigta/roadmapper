@@ -6,10 +6,11 @@ links:
 ## deploy コマンドの実行
 
 ```bash
-roadmapper deploy --target github
+roadmapper deploy --target github              # 現在のブランチを対象にする
+roadmapper deploy --target github --branch master  # ブランチを明示する
 ```
 
-`.github/workflows/pages.yml` が生成されます。`-t` / `--target` は必須で、`github` または `gitlab` を指定します。
+`.github/workflows/pages.yml` が生成されます。トリガーのブランチは `--branch` / `-b` で指定したもの、未指定ならカレントリポジトリの現在のブランチ (`.git/HEAD` から取得。detached HEAD や取得失敗時は `main` にフォールバックし、その旨を表示) になります。
 出力先はカレントディレクトリ基準で固定のため、リポジトリのルートで実行してください。
 `-c` / `-o` のようなオプションはありません。
 
@@ -19,7 +20,7 @@ roadmapper deploy --target github
 name: Deploy to GitHub Pages
 on:
   push:
-    branches: [main]
+    branches: [main]   # 実際は --branch または現在のブランチ名
 permissions:
   contents: read
   pages: write
@@ -57,7 +58,7 @@ jobs:
 
 - GitHub Releases の最新バイナリを取得するため、CI に Go のセットアップは不要
 - `--base` にリポジトリ名が自動で渡される (`site.basePath` より優先)
-- `main` ブランチへの push で起動する。既定ブランチが `master` などの場合は `branches:` を書き換える
+- 対象ブランチ (`--branch` または生成時の現在のブランチ) への push で起動する。後から変える場合は `branches:` を書き換えるか、`--branch` を付けて再生成する
 - `roadmap.yml` がリポジトリ直下にない場合は `roadmapper build -c <パス>` に書き換える
 
 ## 再生成時の動作

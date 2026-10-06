@@ -43,6 +43,9 @@ type Doc struct {
 	// RelDir は content/ からの相対ディレクトリ (`/` 区切り)。
 	// ルート直下のファイルは空文字列。例: content/frontend/html.md → "frontend"
 	RelDir string
+	// RelPath は content/ からの相対パス (`/` 区切り、拡張子込み)。
+	// 例: content/frontend/html.md → "frontend/html.md"。LoadDir 経由でのみ設定される。
+	RelPath string
 }
 
 // Asset は content/ 配下にある非 .md の静的ファイル。
@@ -96,6 +99,7 @@ func LoadDir(dir string) (map[string]*Doc, error) {
 			relDir = ""
 		}
 		doc.RelDir = relDir
+		doc.RelPath = filepath.ToSlash(rel)
 		docs[relID] = doc
 
 		// フォールバックキー (ルートファイルは relID == base なので登録不要)

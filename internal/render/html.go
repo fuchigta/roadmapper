@@ -25,6 +25,8 @@ type NodeMeta struct {
 	Children      []string      `json:"children,omitempty"`
 	Difficulty    string        `json:"difficulty,omitempty"`
 	EstimatedTime string        `json:"estimatedTime,omitempty"`
+	// EditPath は記事ファイルのリポジトリルート相対パス (`/` 区切り)。「この記事を編集」リンク用。
+	EditPath string `json:"editPath,omitempty"`
 }
 
 // RenderRoadmapPage は roadmap.html を使ってロードマップページの HTML を生成する。
@@ -41,6 +43,7 @@ func RenderRoadmapPage(
 	hasMermaid bool, // mermaid コードブロックがあれば mermaid.js を読み込む
 	log *changelog.Log, // 改版履歴 (nil または空なら履歴 UI を出さない)
 	badges map[string]time.Time, // 更新バッジを付けるノード ID → 更新日 (nil 可)
+	editPaths map[string]string, // ノード ID → 記事のリポジトリルート相対パス (nil 可)
 ) (string, error) {
 	colors := DeriveColors(cfg.Site.BrandColor)
 
@@ -60,7 +63,7 @@ func RenderRoadmapPage(
 		nodeHTML = withHist
 	}
 
-	nodeMeta, nodeOrder := buildNodeMeta(g, nodeHTML, nodeText)
+	nodeMeta, nodeOrder := buildNodeMeta(g, nodeHTML, nodeText, editPaths)
 	nodeDataJSON, err := json.Marshal(nodeMeta)
 	if err != nil {
 		return "", err
@@ -180,7 +183,7 @@ func graphNodeOrder(g *graph.Graph) []string {
 
 // buildNodeMeta は g.Nodes を1パスでメタデータマップと DAG 順序スライスを返す。
 // nodeHTML / nodeText が nil の場合は対応フィールドを空にする。
-func buildNodeMeta(g *graph.Graph, nodeHTML, nodeText map[string]string) (map[string]NodeMeta, []string) {
+func buildNodeMeta(g *graph.Graph, nodeHTML, nodeText, editPaths map[string]string) (map[string]NodeMeta, []string) {
 	meta := make(map[string]NodeMeta, len(g.Nodes))
 	order := make([]string, len(g.Nodes))
 	for i, n := range g.Nodes {
@@ -202,6 +205,7 @@ func buildNodeMeta(g *graph.Graph, nodeHTML, nodeText map[string]string) (map[st
 			Children:      childIDs,
 			Difficulty:    string(n.Node.Difficulty),
 			EstimatedTime: n.Node.EstimatedTime,
+			EditPath:      editPaths[n.ID],
 		}
 		order[i] = n.ID
 	}

@@ -27,13 +27,13 @@ pages:
     paths:
       - public
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main"   # 実際は --branch または現在のブランチ名 (例: master)
 ```
 
 GitLab Pages はデフォルトで `public/` ディレクトリを公開するため、
 ビルド後に `dist` を `public` へ移動している点に注意してください。
 `--base` にはプロジェクト名が渡されます。公開 URL が異なる場合 (グループ Pages など) は書き換えてください。
-既定ブランチが `main` でない場合は `rules:` の条件を書き換えます。
+対象ブランチを後から変える場合は `rules:` の条件を書き換えるか、`--branch` を付けて再生成します。
 
 ## サブタスク
 

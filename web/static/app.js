@@ -324,15 +324,14 @@ function openPanel(nodeId) {
   highlightRelations(nodeId);
 
   const editLink = document.getElementById('edit-link');
-  if (editLink && cfg.repo) {
+  const ep = nodeData[nodeId]?.editPath;
+  if (editLink && cfg.repo && ep) {
     // GitLab (gitlab.com / セルフホスト) は /-/edit/、それ以外は GitHub 形式
     let isGitLab = false;
     try {
       isGitLab = /(^|\.)gitlab(\.|$)/.test(new URL(cfg.repo).hostname);
     } catch { /* repo が URL でなければ GitHub 形式にフォールバック */ }
-    editLink.href = isGitLab
-      ? `${cfg.repo}/-/edit/${cfg.editBranch}/content/${nodeId}.md`
-      : `${cfg.repo}/edit/${cfg.editBranch}/content/${nodeId}.md`;
+    editLink.href = `${cfg.repo}${isGitLab ? '/-' : ''}/edit/${cfg.editBranch}/${ep}`;
     editLink.textContent = `この記事を編集 (${isGitLab ? 'GitLab' : 'GitHub'})`;
   }
 

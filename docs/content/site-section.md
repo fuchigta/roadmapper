@@ -25,7 +25,7 @@ site:
 | `author` | 任意 | — | トップページのフッターに `by <author>` と表示される |
 | `license` | 任意 | — | `author` を設定したときに限りフッターに表示される |
 | `repo` | 任意 | — | 設定するとサイドパネルに「この記事を編集」リンクが表示される (GitLab の URL なら GitLab 形式の編集 URL) |
-| `editBranch` | 任意 | `main` | `repo` と組み合わせて編集リンクを生成する |
+| `editBranch` | 任意 | `main` | `repo` と組み合わせて編集リンクを生成する。記事の実ファイルパスはビルド時に `.git` を探索して自動解決される (`content:` 指定・サブディレクトリ・`docs/` 配下の roadmap.yml に対応) |
 | `basePath` | 任意 | 空 | GitHub Pages のリポジトリサブディレクトリ (例: `/my-repo/`) |
 | `siteUrl` | 任意 | 空 | 設定すると `sitemap.xml` / `feed.rss` が生成され、`og:url` が付く |
 

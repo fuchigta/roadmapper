@@ -8,7 +8,7 @@ links:
 1. GitHub リポジトリの **Settings** タブを開く
 2. 左メニューの **Pages** をクリック
 3. **Build and deployment** → **Source** を **GitHub Actions** に変更する
-4. 保存後、`main` ブランチに push すると Actions が起動してデプロイが実行される
+4. 保存後、`deploy` で指定した対象ブランチに push すると Actions が起動してデプロイが実行される
 
 ## 注意点
 

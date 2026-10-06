@@ -7,7 +7,7 @@ links:
 ## GitHub Pages 公開の流れ
 
 roadmapper は `deploy` コマンドで GitHub Actions ワークフローを自動生成します。
-`main` ブランチへの push をトリガーに、ビルドからデプロイまでを自動実行します。
+対象ブランチ (既定は `deploy` 実行時の現在のブランチ) への push をトリガーに、ビルドからデプロイまでを自動実行します。
 
 ```
 roadmapper deploy → .github/workflows/pages.yml 生成

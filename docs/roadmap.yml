@@ -5,7 +5,7 @@ site:
   author: fuchigta
   license: Apache-2.0
   repo: https://github.com/fuchigta/roadmapper
-  editBranch: main
+  editBranch: master
   basePath: /roadmapper/
   siteUrl: https://fuchigta.github.io/roadmapper
 
