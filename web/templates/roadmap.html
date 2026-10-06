@@ -22,6 +22,7 @@
     }
     {{.ChromaCSS}}
   </style>
+  {{.AnalyticsHead}}
 </head>
 <body>
   <header class="site-header">
@@ -105,7 +106,8 @@
       repo: {{.RepoJSON}},
       editBranch: {{.EditBranchJSON}},
       roadmapId: {{.RoadmapIdJSON}},
-      progressSync: {{.ProgressSyncJSON}}
+      progressSync: {{.ProgressSyncJSON}},
+      analyticsEvents: {{.AnalyticsEvents}}
     };
   </script>
   <script src="{{.AssetBase}}app.js"></script>

@@ -211,3 +211,35 @@ func TestValidate_panel(t *testing.T) {
 		})
 	}
 }
+
+func TestValidate_analytics(t *testing.T) {
+	tests := []struct {
+		name    string
+		a       config.Analytics
+		wantErr bool
+	}{
+		{"無効", config.Analytics{}, false},
+		{"umami 正常", config.Analytics{Provider: "umami", ScriptURL: "https://u.example.com/script.js", SiteID: "x"}, false},
+		{"plausible 正常", config.Analytics{Provider: "plausible", ScriptURL: "https://plausible.io/js/script.js", SiteID: "example.com"}, false},
+		{"goatcounter 正常", config.Analytics{Provider: "goatcounter", ScriptURL: "http://gc.example.com/count.js", SiteID: "https://x.goatcounter.com/count"}, false},
+		{"custom 正常", config.Analytics{Provider: "custom", Head: "<script></script>"}, false},
+		{"provider 不正", config.Analytics{Provider: "ga", ScriptURL: "https://x", SiteID: "x"}, true},
+		{"scriptUrl 欠落", config.Analytics{Provider: "umami", SiteID: "x"}, true},
+		{"scriptUrl スキーム不正", config.Analytics{Provider: "umami", ScriptURL: "//x/s.js", SiteID: "x"}, true},
+		{"siteId 欠落", config.Analytics{Provider: "plausible", ScriptURL: "https://x/s.js"}, true},
+		{"custom で head 欠落", config.Analytics{Provider: "custom"}, true},
+		{"custom で head 空白のみ", config.Analytics{Provider: "custom", Head: "  "}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				Site:     config.Site{Title: "T", Analytics: tt.a},
+				Roadmaps: []config.Roadmap{{ID: "r1", Title: "R1"}},
+			}
+			err := config.Validate(cfg)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

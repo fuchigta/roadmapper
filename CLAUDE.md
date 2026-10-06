@@ -81,6 +81,7 @@ internal/
     markdown.go                 # RenderMarkdown / RenderMarkdownWithBase(body, urlPrefix) → HTML string (goldmark + chroma)
     links.go                    # RenderLinks([]Link) → HTML fragment
     theme.go                    # DeriveColors(hex) → {Base, Light}
+    analytics.go                # RenderAnalyticsHead(Analytics) → <head> 用解析タグ
   server/                       # dev サーバ
     server.go                   # HTTP server + SSE + livereload script injection
   templates/                    # init コマンド用スケルトン
@@ -150,6 +151,12 @@ docs/                           # roadmapper 自身で作った使い方ガイ�
 - SVG の「更新」バッジは `changelog.Recent` で最終更新から 30 日以内のノード (`build.go` の `recentUpdateDays`)
 - `site.panel` (width / minWidth / maxWidth) の既定値補完は `applyDefaults`、整合性検証は `validatePanel`
 - `site.contentAssets.exclude` は `content.LoadAssets` で `content/` からの相対パスに glob 適用。`content/` の非 `.md` ファイルは `dist/content/` にコピーされ、Markdown 内の相対 URL は `RenderMarkdownWithBase` で書き換える
+
+### アクセス解析 (`site.analytics`)
+- `provider` (umami / plausible / goatcounter / custom) が空なら無効。`render.RenderAnalyticsHead` が `<head>` 用タグを生成する (属性は `html/template` でエスケープ、custom の `head` のみ素通し)
+- アダプタ方式: provider ごとに `window.roadmapperTrack(name, data)` を head で定義し、`app.js` は `track()` 経由でのみ呼ぶ。`SITE_CONFIG.analyticsEvents` が false なら何も送らず、例外は握りつぶす
+- イベント: `node_open` / `node_state` / `share` / `outbound`。**deviceId・進捗データ・`?p=` の値は送らない**。シェアビューでは `node_state` を送らない
+- `roadmapper dev` は常に解析を無効化 (`runBuild` の `noAnalytics`)、`build --no-analytics` でも無効化できる
 
 ## 禁止事項
 

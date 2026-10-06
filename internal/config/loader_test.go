@@ -27,3 +27,29 @@ func TestApplyDefaults_panel(t *testing.T) {
 		})
 	}
 }
+
+func TestApplyDefaults_analytics(t *testing.T) {
+	f := false
+	tests := []struct {
+		name       string
+		in         Analytics
+		wantEvents bool
+		wantExcl   bool
+	}{
+		{"未指定は両方 true", Analytics{}, true, true},
+		{"明示 false を保持", Analytics{Events: &f, ExcludeSearch: &f}, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Site: Site{Analytics: tt.in}}
+			applyDefaults(cfg)
+			a := cfg.Site.Analytics
+			if a.Events == nil || a.ExcludeSearch == nil {
+				t.Fatal("nil が補完されていない")
+			}
+			if a.EventsEnabled() != tt.wantEvents || a.ExcludeSearchEnabled() != tt.wantExcl {
+				t.Errorf("events=%v exclude=%v", a.EventsEnabled(), a.ExcludeSearchEnabled())
+			}
+		})
+	}
+}

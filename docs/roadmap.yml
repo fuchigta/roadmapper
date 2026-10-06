@@ -62,6 +62,9 @@ roadmaps:
           - id: layout-panel
             title: レイアウトとパネル幅 (layout / panel)
             type: optional
+          - id: analytics
+            title: アクセス解析 (umami / Plausible など)
+            type: optional
 
       - id: content-md
         title: コンテンツ Markdown

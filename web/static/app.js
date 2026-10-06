@@ -20,6 +20,18 @@ const cfg = window.SITE_CONFIG || {};
 const nodeData = window.ROADMAP_DATA || {};
 const roadmapId = cfg.roadmapId || '';
 
+// ===== Analytics =====
+// TEST:TRACK_BEGIN
+// window.roadmapperTrack (head のアダプタ) 経由でイベントを送る。例外は握りつぶす。
+const isShareView = new URLSearchParams(location.search).has('p');
+const track = (n, d) => {
+  try { if (cfg.analyticsEvents) window.roadmapperTrack?.(n, d); } catch (e) { /* ignore */ }
+};
+const trackState = (node, state) => {
+  if (!isShareView) track('node_state', { roadmap: roadmapId, node, state });
+};
+// TEST:TRACK_END
+
 function getNodeState(nodeId) {
   return (progress[roadmapId]?.[nodeId]) || { state: 'none', tasks: [] };
 }
@@ -28,6 +40,7 @@ function setNodeState(nodeId, patch) {
   if (!progress[roadmapId]) progress[roadmapId] = {};
   const cur = getNodeState(nodeId);
   progress[roadmapId][nodeId] = { ...cur, ...patch };
+  if (patch.state && patch.state !== cur.state) trackState(nodeId, patch.state);
   saveProgress(progress);
   schedulePut(roadmapId);
 }
@@ -271,6 +284,7 @@ function openPanel(nodeId) {
   const data = nodeData[nodeId];
   if (!data) return;
   currentNodeId = nodeId;
+  track('node_open', { roadmap: roadmapId, node: nodeId });
   panel?.classList.remove('history-mode');
 
   document.getElementById('panel-title').textContent = data.title;
@@ -694,6 +708,7 @@ function initShare() {
   document.getElementById('share-btn')?.addEventListener('click', () => {
     const encoded = encodeProgress(progress);
     if (!encoded) return;
+    track('share', { roadmap: roadmapId });
     const url = new URL(location.href);
     url.searchParams.set('p', encoded);
     url.hash = '';
@@ -845,6 +860,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('panel-content')?.addEventListener('click', e => {
     const a = e.target.closest?.('a[data-node]');
     if (a) { e.preventDefault(); openPanel(a.dataset.node); }
+    const o = e.target.closest?.('a[href^="http"]');
+    if (o && o.origin !== location.origin) track('outbound', { roadmap: roadmapId, node: currentNodeId, url: o.href });
   });
 
   // パネル閉じる

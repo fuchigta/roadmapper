@@ -70,12 +70,37 @@ func Validate(cfg *Config) error {
 		}
 	}
 
+	validateAnalytics(cfg.Site.Analytics, &errs)
 	validatePanel(cfg.Site.Panel, &errs)
 
 	if len(errs) > 0 {
 		return errs
 	}
 	return nil
+}
+
+// validateAnalytics はアクセス解析設定を検査する。provider が空なら何も検査しない。
+func validateAnalytics(a Analytics, errs *ValidationErrors) {
+	const f = "site.analytics."
+	switch a.Provider {
+	case "":
+		return
+	case AnalyticsUmami, AnalyticsPlausible, AnalyticsGoatCounter:
+		if a.ScriptURL == "" {
+			*errs = append(*errs, ValidationError{f + "scriptUrl", "scriptUrl が必要です"})
+		} else if !strings.HasPrefix(a.ScriptURL, "http://") && !strings.HasPrefix(a.ScriptURL, "https://") {
+			*errs = append(*errs, ValidationError{f + "scriptUrl", "scriptUrl は http:// または https:// で始まる必要があります"})
+		}
+		if a.SiteID == "" {
+			*errs = append(*errs, ValidationError{f + "siteId", "siteId が必要です"})
+		}
+	case AnalyticsCustom:
+		if strings.TrimSpace(a.Head) == "" {
+			*errs = append(*errs, ValidationError{f + "head", "provider: custom には head が必要です"})
+		}
+	default:
+		*errs = append(*errs, ValidationError{f + "provider", fmt.Sprintf("provider %q は不正です (umami / plausible / goatcounter / custom)", a.Provider)})
+	}
 }
 
 // validatePanel はパネル幅設定を検査する。0 は未設定 (applyDefaults で補完される) として扱う。

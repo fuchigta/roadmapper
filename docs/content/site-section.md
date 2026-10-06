@@ -36,6 +36,7 @@ site:
 | `layout` (`rankDir` / `nodeSep` / `rankSep`)、`panel` (`width` / `minWidth` / `maxWidth`) | レイアウトとパネル幅 |
 | `contentAssets` (`exclude`) | 画像など静的ファイルの参照 |
 | `progressSync` (`enabled` / `endpoint`) | 進捗のバックエンド同期 |
+| `analytics` (`provider` / `scriptUrl` / `siteId` など) | アクセス解析 |
 
 ## サブタスク
 

@@ -19,6 +19,7 @@
       --brand-light: {{.BrandColorLight}};
     }
   </style>
+  {{.AnalyticsHead}}
 </head>
 <body>
   <header class="site-header">
@@ -53,7 +54,7 @@
   </main>
 
   <script>
-    window.SITE_CONFIG = { basePath: {{.BasePathJSON}}, progressSync: {{.ProgressSyncJSON}} };
+    window.SITE_CONFIG = { basePath: {{.BasePathJSON}}, progressSync: {{.ProgressSyncJSON}}, analyticsEvents: {{.AnalyticsEvents}} };
     window.ROADMAP_IDS = {{.RoadmapIdsJSON}};
     window.ROADMAP_NODE_IDS = {{.NodeIdsJSON}};
   </script>

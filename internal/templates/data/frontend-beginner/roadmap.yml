@@ -7,6 +7,12 @@ site:
   repo: https://github.com/your-name/your-repo
   editBranch: main
   basePath: ""
+  # アクセス解析 (任意): umami / plausible / goatcounter / custom。dev では常に無効
+  # analytics:
+  #   provider: umami
+  #   scriptUrl: https://analytics.example.com/script.js
+  #   siteId: your-website-id
+  #   domains: [your-site.example.com]   # 計測を許可するホスト名 (umami)
   siteUrl: ""  # 公開URLを設定すると sitemap.xml / feed.rss が生成されます (例: https://your-name.github.io/your-repo)
 
 roadmaps:

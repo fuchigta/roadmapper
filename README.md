@@ -91,7 +91,7 @@ Flags:
       --strict          content/*.md が見つからないノードや改版履歴の警告があればエラーで終了する
 ```
 
-`roadmap.yml` の必須項目・ID の重複・親ノードの存在・`type` / `difficulty` の値・`progressSync` / `panel` の設定・
+`roadmap.yml` の必須項目・ID の重複・親ノードの存在・`type` / `difficulty` の値・`progressSync` / `panel` / `analytics` の設定・
 改版履歴の日付形式、およびグラフの循環参照を検証します (違反はエラー)。
 `content/*.md` が見つからないノードと改版履歴の不整合は warning として表示し、`--strict` 指定時のみ exit code 1 になります。
 
@@ -104,6 +104,7 @@ Flags:
   -c, --config string   設定ファイルのパス (default "roadmap.yml")
   -o, --out string      出力ディレクトリ (default "dist")
       --base string     ベースパス (例: /my-repo/)
+      --no-analytics    アクセス解析タグを出力しない
 ```
 
 GitHub Pages のサブパスにデプロイする場合は `--base /リポジトリ名/` を指定します。`roadmapper deploy` が生成する CI では自動設定されます。
@@ -150,6 +151,10 @@ site:
   editBranch: main
   basePath: ""                         # GH Pages サブパス用 (例: /my-repo/)
   siteUrl: ""                          # 公開 URL (sitemap.xml / RSS / OGP の og:url 用)
+  analytics:                           # アクセス解析 (任意, 詳細は「アクセス解析」)
+    provider: umami                    # umami / plausible / goatcounter / custom (空なら無効)
+    scriptUrl: https://analytics.example.com/script.js
+    siteId: your-website-id
   panel:                               # 記事サイドパネルの幅 (px)
     width: 520                         # 初期幅
     minWidth: 320                      # 最小幅
@@ -203,6 +208,7 @@ roadmaps:
 | `site.editBranch` | `main` |
 | `site.layout.rankDir` / `nodeSep` / `rankSep` | `TB` / `50` / `80` |
 | `site.panel.width` / `minWidth` / `maxWidth` | `520` / `320` / `960` (指定済みの値と矛盾しない範囲に補正) |
+| `site.analytics.events` / `excludeSearch` | `true` / `true` |
 | `roadmaps[].nodes[].type` | `required` |
 
 `roadmapper validate` / `build` は次を検証します。
@@ -211,6 +217,7 @@ roadmaps:
 - `parents` は同一ロードマップ内の既存ノードを指すこと (循環参照はグラフ構築時にエラー)
 - `type` は `required` / `optional` / `alternative`、`difficulty` は `beginner` / `intermediate` / `advanced`
 - `progressSync.enabled: true` のときは `endpoint` が必須で、`http://` または `https://` で始まること
+- `analytics.provider` は `umami` / `plausible` / `goatcounter` / `custom` のいずれか (空なら無効)。`custom` 以外は `scriptUrl` (`http://` / `https://`) と `siteId` が必須、`custom` は `head` が必須
 - `panel` の各値は負でなく、`minWidth <= width <= maxWidth` であること
 - `changelog` の `date` は `YYYY-MM-DD`、`summary` は必須、`nodes` は同一ロードマップのノード ID であること
 
@@ -460,6 +467,70 @@ export default {
 ```
 
 `MY_KV` は Cloudflare Workers KV バインディングです。認証はリバースプロキシや Cloudflare Access で付与してください。
+
+## アクセス解析
+
+`site.analytics` を設定すると、生成する全ページの `<head>` に解析タグを埋め込みます。Cookie を使わない
+セルフホスト/軽量サービス (umami / Plausible / GoatCounter) を想定しており、`provider` が空なら何も出力しません。
+
+```yaml
+site:
+  analytics:
+    provider: umami                     # umami / plausible / goatcounter / custom
+    scriptUrl: https://analytics.example.com/script.js   # http:// または https:// (custom 以外は必須)
+    siteId: 11111111-2222-3333-4444-555555555555         # custom 以外は必須
+    domains: [your-name.github.io]      # umami のみ: 計測を許可するホスト名 (推奨)
+    events: true                        # 利用イベントの送信 (既定 true)
+    excludeSearch: true                 # クエリ文字列を記録しない (既定 true, umami のみ)
+```
+
+| provider | `siteId` の意味 | 出力されるタグ |
+|---|---|---|
+| `umami` | `data-website-id` | `<script defer src=... data-website-id=... data-domains=... data-exclude-search="true">` |
+| `plausible` | `data-domain` | `<script defer data-domain=... src=...>` |
+| `goatcounter` | `data-goatcounter` (例: `https://xxx.goatcounter.com/count`) | `<script data-goatcounter=... async src=...>` |
+| `custom` | (未使用) | `head` の内容をそのまま挿入 |
+
+サービスに対応する属性がない設定 (例: Plausible の `excludeSearch`) は無視されます。
+`domains` を指定すると、`localhost` やフォークされたサイトからの計測を除外できます。
+
+### custom (GA4 など)
+
+`provider: custom` では `head` を `<head>` にそのまま挿入します。信頼できる内容のみ記述してください。
+
+```yaml
+site:
+  analytics:
+    provider: custom
+    head: |
+      <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXX');
+        // 任意: roadmapper のイベントを GA4 に転送する
+        window.roadmapperTrack = function (name, data) { gtag('event', name, data); };
+      </script>
+```
+
+### 送信するイベント
+
+各 provider 用のアダプタが `window.roadmapperTrack(name, data)` を定義し、`events: true` の間だけ以下を送ります
+(custom では利用者が `roadmapperTrack` を定義した場合のみ送信されます)。
+
+| イベント | データ | 送信タイミング |
+|---|---|---|
+| `node_open` | `roadmap`, `node` | ノードの記事パネルを開いたとき |
+| `node_state` | `roadmap`, `node`, `state` | ノードの進捗状態を変更したとき (シェアビューでは送らない) |
+| `share` | `roadmap` | 共有ボタンを押したとき |
+| `outbound` | `roadmap`, `node`, `url` | パネル内の外部リンクをクリックしたとき |
+
+### プライバシー
+
+- 端末の匿名 ID (`deviceId`) や進捗データ、シェア URL の `?p=...` の値はイベントに含めません。
+- umami では既定で `data-exclude-search="true"` を付け、シェア URL のクエリ文字列を記録しません。
+- `roadmapper dev` では常に無効です。本番ビルドでも無効にしたいときは `roadmapper build --no-analytics` を使います。
 
 ## ライセンス
 
