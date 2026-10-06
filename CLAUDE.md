@@ -27,11 +27,11 @@ spotter check --range origin/master..HEAD   # push 前の範囲を手元で検�
 [spotter](https://github.com/fuchigta/spotter) で次を検査する。設定は `.spotter.yml`、バージョンは `mise.toml` と `.github/workflows/test.yml` で揃える。
 
 - `doc-sync`: CLI フラグ・設定スキーマ・deploy の CI 雛形・解析イベント・ファイル追加削除・依存を変更したら、対応する README / ガイド / CLAUDE.md も同じ push 範囲で変更されていること (コミットを分けるのは可)
-- `consistency`: フラグ一覧・テンプレート一覧・設定キー・解析イベント名が実装とドキュメントで一致すること
+- `consistency`: フラグ一覧・テンプレート一覧・設定キー・解析イベント名が実装とドキュメントで一致すること、使い方ガイドの記事ファイル (`docs/content/*.md`) とノード ID が一対一であること
 - `doc-paths` / `doc-links`: ドキュメント中のパス参照・リンク先が実在すること
 
 違反したらドキュメントを直すのが原則。ドキュメントに影響しない変更なら、コミットメッセージ末尾のトレーラで理由付きで免除する (例: `Doc-Sync: skip[README.md] 内部リファクタでフラグは不変`)。
-検査を追加・変更したら `spotter config lint` で死んだ設定がないか確認する。
+検査を追加・変更したら `spotter config lint` で死んだ設定がないか確認し、`spotter config explain <検査名>` で抽出結果 (consistency の要素・doc-paths の候補など) が意図どおりか確かめる。
 
 ## 必須コマンド
 

@@ -105,13 +105,21 @@ checks:
       - file: docs/content/analytics.md
         extract: '^\| `([a-z_]+)` \| `roadmap`'
 
+  # 使い方ガイドの記事ファイル集合とノード ID 集合 (validate --strict では見つからない孤立記事も検出する)
+  docs-content-index:
+    type: consistency
+    sources:
+      - glob: 'docs/content/**/*.md'
+        base: docs/content
+        extract: '^(.+)\.md$'
+      - file: docs/roadmap.yml
+        extract: '^ {6,}- id: ([\w-]+)$'   # ロードマップ ID (インデント 2) を除いたノード ID
+
   # ---- ドキュメントが指すパス・リンクの実在 ----
   doc-paths:
     type: doc-paths
     docs: [README.md, CLAUDE.md, '.claude/rules/*.md', '.claude/skills/**/*.md', 'docs/content/*.md']
     path_prefixes: [internal, cmd, web, docs, .github, .claude, .lefthook]
-    # 末尾スラッシュ付きのディレクトリ参照が実在しない扱いになるため除外 (spotter 側の issue 参照)
-    ignore: [internal/, internal/command/, web/, docs/]
 
   doc-links:
     type: doc-links
