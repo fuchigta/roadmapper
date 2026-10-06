@@ -51,6 +51,9 @@ roadmaps:
           - id: multiple-roadmaps
             title: 複数ロードマップ
             type: optional
+          - id: analytics
+            title: アクセス解析 (umami / Plausible など)
+            type: optional
 
       - id: content-md
         title: コンテンツ Markdown
