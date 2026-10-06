@@ -25,33 +25,40 @@ const recentUpdateDays = 30
 
 func NewBuildCmd() *cobra.Command {
 	var (
-		configPath string
-		outDir     string
-		basePath   string
+		configPath  string
+		outDir      string
+		basePath    string
+		noAnalytics bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "build",
 		Short: "静的サイトを生成する",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runBuild(configPath, outDir, basePath)
+			return runBuild(configPath, outDir, basePath, noAnalytics)
 		},
 	}
 
 	cmd.Flags().StringVarP(&configPath, "config", "c", "roadmap.yml", "設定ファイルのパス")
 	cmd.Flags().StringVarP(&outDir, "out", "o", "dist", "出力ディレクトリ")
 	cmd.Flags().StringVar(&basePath, "base", "", "ベースパス (例: /my-repo/)")
+	cmd.Flags().BoolVar(&noAnalytics, "no-analytics", false, "アクセス解析タグを出力しない")
 
 	return cmd
 }
 
-func runBuild(configPath, outDir, basePath string) error {
+// runBuild はサイトを生成する。noAnalytics が true なら site.analytics を無効化する。
+func runBuild(configPath, outDir, basePath string, noAnalytics bool) error {
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		return err
 	}
 	if err := config.Validate(cfg); err != nil {
 		return err
+	}
+
+	if noAnalytics {
+		cfg.Site.Analytics.Provider = ""
 	}
 
 	// basePath: フラグ優先、なければ config
