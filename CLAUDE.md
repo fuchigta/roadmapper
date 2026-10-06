@@ -5,20 +5,33 @@
 Go 製の学習ロードマップ静的サイトジェネレータ CLI。`roadmap.yml` + `content/*.md` から
 GitHub Pages / GitLab Pages 対応の静的サイトを生成する。**外部ランタイム依存ゼロ** が最重要設計原則。
 
-## Git フック (lefthook)
+## Git フック (lefthook) と spotter
 
 ```bash
 # 初回セットアップ (クローン後に実行)
+mise install              # mise.toml の spotter を導入 (mise を使わない場合は spotter の Releases から取得)
 lefthook install
 
 # 手動実行
 lefthook run pre-commit   # gofmt / go vet / staticcheck
-lefthook run pre-push     # go test -race ./...
+lefthook run pre-push     # go test -race ./... + spotter の全検査
+spotter check --range origin/master..HEAD   # push 前の範囲を手元で検査
 ```
 
 - `pre-commit`: gofmt・go vet・staticcheck を並列実行 (staged Go ファイル対象)
-- `commit-msg`: Conventional Commits 形式を検証 (`.lefthook/commit-msg/conventional.sh`)
-- `pre-push`: `go test -race ./...` を全パッケージに実行
+- `commit-msg`: Conventional Commits 形式を検証 (`spotter check commit-subject`)
+- `pre-push`: `go test -race ./...` と `spotter check --pre-push` (CI の `test.yml` と同じ検査)
+
+### ドキュメントと実装の一致 (`.spotter.yml`)
+
+[spotter](https://github.com/fuchigta/spotter) で次を検査する。設定は `.spotter.yml`、バージョンは `mise.toml` と `.github/workflows/test.yml` で揃える。
+
+- `doc-sync`: CLI フラグ・設定スキーマ・deploy の CI 雛形・解析イベント・ファイル追加削除・依存を変更したら、対応する README / ガイド / CLAUDE.md も同じ push 範囲で変更されていること (コミットを分けるのは可)
+- `consistency`: フラグ一覧・テンプレート一覧・設定キー・解析イベント名が実装とドキュメントで一致すること
+- `doc-paths` / `doc-links`: ドキュメント中のパス参照・リンク先が実在すること
+
+違反したらドキュメントを直すのが原則。ドキュメントに影響しない変更なら、コミットメッセージ末尾のトレーラで理由付きで免除する (例: `Doc-Sync: skip[README.md] 内部リファクタでフラグは不変`)。
+検査を追加・変更したら `spotter config lint` で死んだ設定がないか確認する。
 
 ## 必須コマンド
 

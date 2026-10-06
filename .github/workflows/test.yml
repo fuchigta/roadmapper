@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # spotter が push 範囲の差分を見るため
 
       - uses: actions/setup-go@v7
         with:
@@ -27,3 +29,12 @@ jobs:
       # (2026.x は Go 1.26 以上が必要)
       - name: Run staticcheck
         run: go run honnef.co/go/tools/cmd/staticcheck@2025.1.1 ./...
+
+      # ドキュメントと実装の一致 (.spotter.yml)。バージョンは mise.toml と揃える
+      - name: Install spotter
+        run: |
+          curl -fsSLo /usr/local/bin/spotter https://github.com/fuchigta/spotter/releases/download/v0.12.0/spotter-linux-amd64
+          chmod +x /usr/local/bin/spotter
+
+      - name: Run spotter
+        run: spotter check --range "$(spotter range)"

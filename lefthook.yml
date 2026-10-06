@@ -14,11 +14,18 @@ pre-commit:
       runner: bash
 
 commit-msg:
-  scripts:
-    "conventional.sh":
-      runner: bash
+  commands:
+    # Conventional Commits 形式の検査 (spotter の commit-subject)。
+    # doc-sync などはコミット単位では強制せず、pre-push / CI で push 範囲全体を見る
+    spotter:
+      run: spotter check commit-subject --message {1}
 
 pre-push:
+  commands:
+    # CI と同じ range 検査 (.spotter.yml の全検査)。use_stdin が無いと push 対象の ref が届かない
+    spotter:
+      run: spotter check --pre-push {1}
+      use_stdin: true
   scripts:
     "test.sh":
       runner: bash

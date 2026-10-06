@@ -1,0 +1,118 @@
+# spotter (https://github.com/fuchigta/spotter) の検査設定。
+# ドキュメントと実装の一致を、commit-msg / pre-push フック (lefthook) と CI の両方で同じ設定で検査する。
+#   commit-msg: commit-subject のみ (doc-sync をコミット単位で強制しないため)
+#   pre-push / CI: 全検査 (doc-sync は push 範囲全体をまとめて見る)
+checks:
+  # ---- コミットメッセージ ----
+  commit-subject:
+    type: commit-subject
+    allowed_types: [feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert]
+
+  # ---- コードを変えたらドキュメントも変えたか (push 範囲全体で判定) ----
+  doc-sync:
+    type: doc-sync
+    exclude: ['**/*_test.go', '**/testdata/**']
+    pairs:
+      # CLI のコマンド・フラグ → README の CLI コマンド節
+      - paths: 'internal/command/*.go'
+        doc: README.md
+        when: 'Flags\(\)|Use:|Short:'
+      # roadmap.yml のスキーマ・既定値・検証規則 → README のリファレンス
+      - paths: 'internal/config/{schema,loader,validate}.go'
+        doc: README.md
+      # deploy が生成する CI の雛形 → 使い方ガイド
+      - paths: 'internal/command/deploy.go'
+        doc: docs/content/deploy-github.md
+        when: '^[+-].*(branches|uses:|run:)'
+      # フロントの解析イベント・localStorage キー → README
+      - paths: 'web/static/app.js'
+        doc: README.md
+        when: '^[+-].*(track[(]|localStorage|roadmapper:)'
+      # ファイルの追加・削除 → CLAUDE.md のディレクトリ構造
+      - paths: '{internal,web,cmd}/**'
+        doc: CLAUDE.md
+        when: '^(new|deleted) file mode'
+      # 依存の追加・削除 → CLAUDE.md の依存ライブラリ表
+      - paths: go.mod
+        doc: CLAUDE.md
+        when: '^[+-]\s+\S+ v'
+
+  # ---- 実装とドキュメントの一覧の突き合わせ (現在の作業ツリーで判定) ----
+  cli-flags-build:
+    type: consistency
+    sources:
+      - file: internal/command/build.go
+        extract: 'Flags\(\)\.\w+\(&\w+, "([a-z-]+)"'
+      - file: README.md
+        line: '^### `roadmapper build`'
+        until: '^### '
+        extract: '^\s+(?:-\w, )?--([a-z-]+)\s'
+
+  cli-flags-deploy:
+    type: consistency
+    sources:
+      - file: internal/command/deploy.go
+        extract: 'Flags\(\)\.\w+\(&\w+, "([a-z-]+)"'
+      - file: README.md
+        line: '^### `roadmapper deploy`'
+        until: '^## '
+        extract: '^\s+(?:-\w, )?--([a-z-]+)\s'
+
+  init-templates:
+    type: consistency
+    sources:
+      - file: internal/command/init.go
+        extract: 'availableTemplates = "(.*)"'
+        split: '|'
+      - file: README.md
+        line: '^### `roadmapper init`'
+        until: '^### '
+        extract: '^\| `([a-z-]+)` \|'
+      - file: docs/content/init-templates.md
+        extract: '^\| `([a-z-]+)` \|'
+
+  site-keys:
+    type: consistency
+    sources:
+      - file: README.md
+        line: '^site:$'
+        until: '^(roadmaps:|```)$'
+        extract: '^  (\w+):'
+      - file: internal/config/schema.go
+        line: '^type Site struct'
+        until: '^}'
+        extract: 'yaml:"(\w+)"'
+
+  # schema.go の全 YAML キーが README のどこかに書かれていること (README 側の余分は許容)
+  config-keys:
+    type: consistency
+    sources:
+      - file: README.md
+        extract: '^\s*(?:- )?(\w+):'
+      - file: internal/config/schema.go
+        line: '^type \w+ struct'
+        until: '^}'
+        extract: 'yaml:"(\w+)"'
+        subset: true
+
+  analytics-events:
+    type: consistency
+    sources:
+      - file: web/static/app.js
+        extract: 'track[(]''([a-z_]+)'''
+      - file: README.md
+        extract: '^\| `([a-z_]+)` \| `roadmap`'
+      - file: docs/content/analytics.md
+        extract: '^\| `([a-z_]+)` \| `roadmap`'
+
+  # ---- ドキュメントが指すパス・リンクの実在 ----
+  doc-paths:
+    type: doc-paths
+    docs: [README.md, CLAUDE.md, '.claude/rules/*.md', '.claude/skills/**/*.md', 'docs/content/*.md']
+    path_prefixes: [internal, cmd, web, docs, .github, .claude, .lefthook]
+    # 末尾スラッシュ付きのディレクトリ参照が実在しない扱いになるため除外 (spotter 側の issue 参照)
+    ignore: [internal/, internal/command/, web/, docs/]
+
+  doc-links:
+    type: doc-links
+    docs: [README.md, CLAUDE.md, '.claude/rules/*.md', '.claude/skills/**/*.md', 'docs/content/*.md']
