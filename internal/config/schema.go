@@ -13,6 +13,7 @@ type Site struct {
 	SiteURL       string        `yaml:"siteUrl"` // 公開URL (sitemap/RSS/OGP 用, 例: https://example.com)
 	Layout        Layout        `yaml:"layout"`
 	ProgressSync  ProgressSync  `yaml:"progressSync"`
+	Analytics     Analytics     `yaml:"analytics"`
 	Panel         Panel         `yaml:"panel"`
 	ContentAssets ContentAssets `yaml:"contentAssets"`
 }
@@ -43,6 +44,34 @@ type ProgressSync struct {
 	Enabled  bool   `yaml:"enabled"`
 	Endpoint string `yaml:"endpoint"` // 末尾スラッシュなしのベース URL
 }
+
+// アクセス解析 provider。
+const (
+	AnalyticsUmami       = "umami"
+	AnalyticsPlausible   = "plausible"
+	AnalyticsGoatCounter = "goatcounter"
+	AnalyticsCustom      = "custom"
+)
+
+// Analytics はアクセス解析の設定。Provider が空なら無効。
+type Analytics struct {
+	Provider      string   `yaml:"provider"`      // umami | plausible | goatcounter | custom
+	ScriptURL     string   `yaml:"scriptUrl"`     // 解析スクリプトの URL
+	SiteID        string   `yaml:"siteId"`        // umami: data-website-id / plausible: data-domain / goatcounter: data-goatcounter
+	Domains       []string `yaml:"domains"`       // umami の data-domains (計測を許可するホスト名)
+	Events        *bool    `yaml:"events"`        // カスタムイベント送信 (既定 true)
+	ExcludeSearch *bool    `yaml:"excludeSearch"` // クエリ文字列を記録しない (既定 true, umami のみ)
+	Head          string   `yaml:"head"`          // provider: custom のとき <head> にそのまま挿入する HTML
+}
+
+// Enabled は解析が有効 (provider 指定あり) かを返す。
+func (a Analytics) Enabled() bool { return a.Provider != "" }
+
+// EventsEnabled はカスタムイベント送信が有効かを返す (nil は true)。
+func (a Analytics) EventsEnabled() bool { return a.Events == nil || *a.Events }
+
+// ExcludeSearchEnabled はクエリ文字列の除外が有効かを返す (nil は true)。
+func (a Analytics) ExcludeSearchEnabled() bool { return a.ExcludeSearch == nil || *a.ExcludeSearch }
 
 // NodeType はノードの重要度を表す。
 type NodeType string
