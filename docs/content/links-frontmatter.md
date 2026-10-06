@@ -22,7 +22,7 @@ links:
 | `title` | 必須 | リンクの表示テキスト |
 | `url` | 必須 | 遷移先 URL |
 
-リンクはすべて `target="_blank" rel="noopener"` で新しいタブに開きます。
+リンクはすべて `target="_blank" rel="noopener noreferrer"` で新しいタブに開きます。
 
 ## roadmap.yml との優先関係
 

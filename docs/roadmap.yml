@@ -22,11 +22,19 @@ roadmaps:
         title: プロジェクト初期化
         type: required
         parents: [install]
+        children:
+          - id: init-templates
+            title: テンプレート一覧 (init --template)
+            type: optional
 
       - id: local-preview
         title: ローカルプレビュー
         type: required
         parents: [init]
+        children:
+          - id: validate-strict
+            title: validate --strict で警告もエラーにする
+            type: optional
 
   - id: customize
     title: カスタマイズ
@@ -51,6 +59,9 @@ roadmaps:
           - id: multiple-roadmaps
             title: 複数ロードマップ
             type: optional
+          - id: layout-panel
+            title: レイアウトとパネル幅 (layout / panel)
+            type: optional
 
       - id: content-md
         title: コンテンツ Markdown
@@ -62,11 +73,24 @@ roadmaps:
           - id: checklist-items
             title: チェックリストで進捗管理
             type: required
+            children:
+              - id: progress-sync
+                title: 進捗のバックエンド同期 (progressSync)
+                type: optional
           - id: code-highlighting
             title: コードブロックとシンタックスハイライト
             type: optional
           - id: mermaid-diagrams
             title: Mermaid 図の埋め込み
+            type: optional
+          - id: content-subdirs
+            title: サブディレクトリとノード ID の対応
+            type: optional
+          - id: content-assets
+            title: 画像など静的ファイルの参照
+            type: optional
+          - id: changelog
+            title: 改版履歴 (changelog)
             type: optional
 
   - id: publish

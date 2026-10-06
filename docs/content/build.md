@@ -10,6 +10,7 @@ dist/
 ├── index.html          # ロードマップ一覧ページ
 ├── getting-started/    # 各ロードマップページ (id が名前)
 │   └── index.html
+├── content/            # content/ 内の画像など非 .md ファイル (あれば)
 ├── style.css
 ├── app.js
 ├── sitemap.xml         # siteUrl が設定されている場合
@@ -18,5 +19,5 @@ dist/
 
 ## 学ぶこと
 
-- **build コマンドで静的ファイル生成** — `-c` / `-o` オプションと出力ファイル一覧
+- **build コマンドで静的ファイル生成** — `-c` / `-o` / `--base` オプションと出力ファイル一覧
 - **basePath の設定** — サブディレクトリ公開とルート公開の使い分け

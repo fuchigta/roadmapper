@@ -4,8 +4,9 @@
 
 | ファイル | 用途 |
 |---|---|
-| `sitemap.xml` | 検索エンジンへのインデックス通知 |
+| `sitemap.xml` | 検索エンジンへのインデックス通知 (トップと各ロードマップページの URL) |
 | `feed.rss` | RSS リーダーへのコンテンツ配信 |
+| `og:url` メタタグ | 各ページの OGP URL |
 
 ## 設定方法
 
@@ -19,7 +20,8 @@ site:
 ## 未設定時の挙動
 
 `siteUrl` を設定しなくても静的サイト本体のビルドは正常に動作します。
-sitemap と RSS が不要な場合は空欄のままで問題ありません。
+sitemap と RSS は生成されず、`og:url` も付きません (`og:title` などの OGP タグは常に出力されます)。
+不要な場合は空欄のままで問題ありません。
 
 ## 設定後の確認
 
@@ -28,8 +30,9 @@ roadmapper build -c roadmap.yml -o dist
 ls dist/sitemap.xml dist/feed.rss   # 存在することを確認
 ```
 
-RSS フィードの `<link>` は各ロードマップページの URL になります。
-`siteUrl + basePath + roadmapId/` が正しく結合されているかを確認してください。
+URL は `siteUrl` + `basePath` (末尾スラッシュは自動補完) + `<roadmapId>/index.html` の形で組み立てられます。
+RSS フィードの item は、改版履歴 (changelog) があるロードマップでは履歴項目ごと、なければノードごとに出力されます。
+結合結果が正しいかを確認してください。
 
 ## サブタスク
 

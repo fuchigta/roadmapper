@@ -20,6 +20,14 @@ site:
 
 > **末尾スラッシュ必須** — `/my-repo` ではなく `/my-repo/` と書いてください。
 
+`build` の `--base` オプションでも指定でき、**こちらが `site.basePath` より優先されます**
+(`roadmapper deploy` が生成する CI は `--base "/<リポジトリ名>/"` を渡すため、CI 上のビルドでは
+`site.basePath` は使われません)。
+
+```bash
+roadmapper build --base /my-repo/
+```
+
 ## よくあるミス
 
 ```yaml

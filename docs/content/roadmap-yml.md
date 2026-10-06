@@ -27,3 +27,4 @@ roadmaps:
 - **ノードタイプ** — `required` / `optional` / `alternative` の違いと表示
 - **親子関係と依存関係** — `children` / `parents` による DAG の表現
 - **複数ロードマップ** — `roadmaps:` 配列を使ったマルチマップ構成
+- **レイアウトとパネル幅** — `layout` による配置の調整と `panel` によるサイドパネル幅の設定
