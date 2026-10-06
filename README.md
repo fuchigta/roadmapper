@@ -24,7 +24,9 @@ go install github.com/fuchigta/roadmapper/cmd/roadmapper@latest
 
 ### バイナリを直接ダウンロード
 
-[Releases](https://github.com/fuchigta/roadmapper/releases) から OS に合ったバイナリを取得してください。
+[Releases](https://github.com/fuchigta/roadmapper/releases) から OS に合ったバイナリ
+(`roadmapper-<os>-<arch>.tar.gz`、Windows は `.zip`。linux / darwin は amd64・arm64、windows は amd64) を取得してください。
+`go install` でビルドする場合は `go.mod` の Go バージョン (1.25 以上) が必要です。
 
 ## クイックスタート
 
@@ -66,8 +68,32 @@ git push
 roadmapper init [dir] [flags]
 
 Flags:
-  -t, --template string   テンプレート名 (minimal / frontend-beginner) (default "minimal")
+  -t, --template string   テンプレート名 (minimal | frontend-beginner | backend-beginner | devops | blank) (default "minimal")
 ```
+
+| テンプレート | 内容 |
+|---|---|
+| `minimal` | 最小構成のサンプル (構造を理解する用) |
+| `frontend-beginner` | フロントエンド学習ロードマップ (改版履歴・リンク・サブタスクの例入り) |
+| `backend-beginner` | バックエンド学習ロードマップ |
+| `devops` | DevOps / インフラ学習ロードマップ |
+| `blank` | `roadmap.yml` と `content/start.md` のみのスケルトン |
+
+`dir` を省略するとカレントディレクトリに展開します。既存のファイルは上書きせずスキップします。
+
+### `roadmapper validate`
+
+```bash
+roadmapper validate [flags]
+
+Flags:
+  -c, --config string   設定ファイルのパス (default "roadmap.yml")
+      --strict          content/*.md が見つからないノードや改版履歴の警告があればエラーで終了する
+```
+
+`roadmap.yml` の必須項目・ID の重複・親ノードの存在・`type` / `difficulty` の値・`progressSync` / `panel` の設定・
+改版履歴の日付形式、およびグラフの循環参照を検証します (違反はエラー)。
+`content/*.md` が見つからないノードと改版履歴の不整合は warning として表示し、`--strict` 指定時のみ exit code 1 になります。
 
 ### `roadmapper build`
 
@@ -88,18 +114,27 @@ GitHub Pages のサブパスにデプロイする場合は `--base /リポジト
 roadmapper dev [flags]
 
 Flags:
-  -p, --port int   開発サーバのポート番号 (default 4321)
+  -c, --config string   設定ファイルのパス (default "roadmap.yml")
+  -o, --out string      出力ディレクトリ (default "dist")
+  -p, --port int        開発サーバのポート番号 (default 4321)
 ```
 
-`roadmap.yml` と `content/` ディレクトリを監視し、変更時に自動リビルド・ブラウザリロードします。
+`roadmap.yml` と `content/` ディレクトリ (サブディレクトリを含む) を監視し、変更時に自動リビルド・ブラウザリロードします。
 
 ### `roadmapper deploy`
 
 ```bash
 roadmapper deploy --target github   # .github/workflows/pages.yml を生成
 roadmapper deploy --target gitlab   # .gitlab-ci.yml を生成
+
+Flags:
+  -t, --target string   デプロイ先 (github / gitlab) (必須)
 ```
 
+生成する CI は、GitHub Releases の最新バイナリ (`roadmapper-linux-amd64.tar.gz`) をダウンロードして
+`roadmapper build --base "/<リポジトリ名>/"` を実行します (`main` ブランチへの push で起動)。
+`-c` / `-o` は指定できず、カレントディレクトリの `roadmap.yml` を `dist/` へビルドします
+(GitLab では `dist` を `public` に移動)。`roadmap.yml` が別の場所にある場合は生成後のファイルを編集してください。
 既存ファイルがある場合は diff を表示して上書き確認します。
 
 ## `roadmap.yml` リファレンス
@@ -114,7 +149,7 @@ site:
   repo: https://github.com/you/repo   # "この記事を編集" リンクに使用
   editBranch: main
   basePath: ""                         # GH Pages サブパス用 (例: /my-repo/)
-  siteUrl: ""                          # 公開 URL (sitemap.xml / RSS / OGP 用)
+  siteUrl: ""                          # 公開 URL (sitemap.xml / RSS / OGP の og:url 用)
   panel:                               # 記事サイドパネルの幅 (px)
     width: 520                         # 初期幅
     minWidth: 320                      # 最小幅
@@ -123,6 +158,8 @@ site:
     rankDir: TB                        # TB / LR / BT / RL
     nodeSep: 50
     rankSep: 80
+  progressSync: {}                     # 進捗のバックエンド同期 (後述)
+  contentAssets: {}                    # content/ 内の静的ファイルのコピー設定 (後述)
 
 roadmaps:
   - id: frontend                       # URL パスにもなる (必須、ユニーク)
@@ -142,6 +179,7 @@ roadmaps:
         parents: [html]               # 複数親 → DAG
         difficulty: beginner          # beginner / intermediate / advanced (任意)
         estimatedTime: "3d"           # 推定所要時間 (任意, 例: "2h", "3d")
+        content: frontend/css         # content/frontend/css.md を明示指定 (任意, 拡張子なし)
         x: 300                        # 手動 X 座標 (任意, 自動レイアウトを上書き)
         y: 200                        # 手動 Y 座標 (任意, 自動レイアウトを上書き)
         children:
@@ -155,13 +193,37 @@ roadmaps:
             url: https://developer.mozilla.org/docs/Web/CSS
 ```
 
+各ロードマップには `changelog` (改版履歴) も書けます (後述)。
+
+### 既定値と検証
+
+| キー | 既定値 |
+|---|---|
+| `site.brandColor` | `#4f46e5` |
+| `site.editBranch` | `main` |
+| `site.layout.rankDir` / `nodeSep` / `rankSep` | `TB` / `50` / `80` |
+| `site.panel.width` / `minWidth` / `maxWidth` | `520` / `320` / `960` (指定済みの値と矛盾しない範囲に補正) |
+| `roadmaps[].nodes[].type` | `required` |
+
+`roadmapper validate` / `build` は次を検証します。
+
+- `site.title`、`roadmaps` (1 件以上)、各ロードマップの `id` (ユニーク) / `title`、各ノードの `id` (ユニーク、`__order` は予約済み) / `title` は必須
+- `parents` は同一ロードマップ内の既存ノードを指すこと (循環参照はグラフ構築時にエラー)
+- `type` は `required` / `optional` / `alternative`、`difficulty` は `beginner` / `intermediate` / `advanced`
+- `progressSync.enabled: true` のときは `endpoint` が必須で、`http://` または `https://` で始まること
+- `panel` の各値は負でなく、`minWidth <= width <= maxWidth` であること
+- `changelog` の `date` は `YYYY-MM-DD`、`summary` は必須、`nodes` は同一ロードマップのノード ID であること
+
 ### ノードタイプ
 
 | type | 表示 | 意味 |
 |---|---|---|
-| `required` | 実線ボーダー | 必須トピック |
-| `optional` | 破線ボーダー | 余裕があれば |
-| `alternative` | 破線ボーダー (薄色) | 代替手段のどれか1つ |
+| `required` | 濃色の塗り | 必須トピック |
+| `optional` | 薄色の塗り + グレー枠、`opt` バッジ、エッジは破線 | 余裕があれば |
+| `alternative` | 紫系の塗り + `alt` バッジ、エッジは破線 | 代替手段のどれか1つ |
+
+`difficulty` を指定するとノード左上に 初 / 中 / 上 のバッジが表示され、サイドパネルにも難易度と
+`estimatedTime` が表示されます。
 
 ## `content/<id>.md` リファレンス
 
@@ -195,8 +257,9 @@ graph LR; HTML --> CSS --> JS
 ```
 ```
 
-- `- [ ]` のチェックリストは進捗トラッキングに自動連動します
-- mermaid コードブロックはブラウザ側で描画されます
+- `- [ ]` のチェックリストは進捗トラッキングに自動連動します (初期状態は常に未チェックで、`- [x]` は初期値になりません)
+- mermaid コードブロックはブラウザ側で描画されます (mermaid ライブラリを CDN (cdn.jsdelivr.net) から読み込むため、オフラインでは図が表示されません。mermaid を含むロードマップページのみ読み込まれます)
+- frontmatter の `updated` / `changes` は改版履歴用です (後述)
 - `links:` は frontmatter と `roadmap.yml` 両方に書けます (frontmatter が優先)
 
 ### content/ のサブディレクトリ
@@ -260,6 +323,7 @@ site:
 
 `*` は単一セグメント、`**` は複数セグメントにマッチします (doublestar 風)。
 パターンは `content/` からの相対パスに対して評価されます。
+`.` で始まる隠しディレクトリは常にスキャン対象外です。
 
 ## 改版履歴 (changelog)
 
@@ -299,6 +363,12 @@ changes:
 `roadmapper validate` は、未来の日付や、`updated` が `changes` / roadmap.yml の changelog より古い
 といった不整合を警告します。`--strict` を付けると警告があれば失敗します (日付形式の誤りは常にエラー)。
 
+## OGP / sitemap / RSS
+
+`site.siteUrl` を設定すると、ビルド時に `sitemap.xml` と `feed.rss` が出力され、ページの `og:url` が付きます。
+`siteUrl` が空のときは sitemap・RSS を生成せず、`og:url` も付きません (`og:title` / `og:description` / `og:type` は常に出力)。
+URL は `siteUrl` + `basePath` (末尾スラッシュ補完) + `<roadmapId>/index.html` の形で組み立てます。
+
 ## GitHub Pages へのデプロイ
 
 ```bash
@@ -306,7 +376,10 @@ roadmapper deploy --target github
 ```
 
 生成された `.github/workflows/pages.yml` をコミット・プッシュするだけです。
-`basePath` は `/${{ github.event.repository.name }}/` に自動設定されます。
+`basePath` は `/${{ github.event.repository.name }}/` に自動設定されます
+(`--base` が `site.basePath` より優先されるため、CI のビルドでは `site.basePath` は使われません)。
+リポジトリの Settings → Pages で Source を **GitHub Actions** にしてください。
+GitLab Pages の場合は `roadmapper deploy --target gitlab` で `.gitlab-ci.yml` を生成します。
 
 ## 進捗トラッキング
 
@@ -316,6 +389,10 @@ roadmapper deploy --target github
 |---|---|
 | ノードをクリック | サイドパネルを開く |
 | チェックリストを操作 | 状態を自動更新 (未着手→学習中→完了) |
+| パネル上部のドロップダウン | 状態を手動設定 (未着手 / 学習中 / 完了 / スキップ) |
+| シェアボタン | 進捗を埋め込んだ URL (`?p=...`) を生成。開いた側は読み取り専用表示で、保存・同期はされません |
+
+localStorage のキーは `roadmapper:progress` です。
 
 ## 進捗のバックエンド同期
 
@@ -335,9 +412,13 @@ site:
 | `GET` | `{endpoint}/{deviceId}/{roadmapId}` | ロードマップ進捗を取得 |
 | `PUT` | `{endpoint}/{deviceId}/{roadmapId}` | ロードマップ進捗を保存 |
 
-- `deviceId` はブラウザ初回アクセス時に `crypto.randomUUID()` で自動生成
-- PUT ボディ: `{ "<nodeId>": { "state": "done", "tasks": [true, false] }, ... }`
+- `deviceId` はブラウザ初回アクセス時に `crypto.randomUUID()` で自動生成 (localStorage の `roadmapper:deviceId`)
+- `endpoint` は `http://` / `https://` で始まる末尾スラッシュなしの URL
+- GET は `Accept: application/json` で呼ばれ、`404` は「データなし」として扱われます。その他の非 2xx 応答やネットワークエラーは無視されます
+- PUT ボディ: `{ "<nodeId>": { "state": "done", "tasks": [true, false] }, ... }` (`state` は `none` / `in-progress` / `done` / `skipped`)
 - サーバは冪等な全置換で実装すればよい
+- 起動時に取得したリモート進捗はローカルとマージされます。ノードごとに進んでいる方を採用し (`none` < `in-progress` < `done` / `skipped`、同ランクは `done` 優先)、`tasks` は OR で結合します
+- PUT は状態変更の 800ms 後 (デバウンス) に送信されます。失敗時は dirty フラグを残し、`online` イベントや次回ロード時に再送します
 
 ### CORS 設定 (必須)
 
