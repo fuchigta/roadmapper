@@ -209,6 +209,11 @@ func TestLoadDir_relDir(t *testing.T) {
 	if docs["frontend/sub/css"].RelDir != "frontend/sub" {
 		t.Errorf("frontend/sub/css RelDir = %q, want \"frontend/sub\"", docs["frontend/sub/css"].RelDir)
 	}
+	for key, want := range map[string]string{"intro": "intro.md", "frontend/html": "frontend/html.md", "frontend/sub/css": "frontend/sub/css.md", "css": "frontend/sub/css.md"} {
+		if docs[key].RelPath != want {
+			t.Errorf("%s RelPath = %q, want %q", key, docs[key].RelPath, want)
+		}
+	}
 }
 
 func TestLoadAssets(t *testing.T) {

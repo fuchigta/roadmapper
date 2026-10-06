@@ -42,7 +42,7 @@ func TestRenderRoadmapPage_progressSyncEnabled(t *testing.T) {
 		Enabled:  true,
 		Endpoint: "https://api.example.com/sync",
 	}
-	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil)
+	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("RenderRoadmapPage: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestRenderRoadmapPage_progressSyncEnabled(t *testing.T) {
 
 func TestRenderRoadmapPage_progressSyncDisabled(t *testing.T) {
 	cfg, g, lr := buildMinimalPageFixture(t)
-	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil)
+	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("RenderRoadmapPage: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestRenderRoadmapPage_progressSyncEndpointTrimsTrailingSlash(t *testing.T) 
 		Enabled:  true,
 		Endpoint: "https://api.example.com/sync/",
 	}
-	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil)
+	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("RenderRoadmapPage: %v", err)
 	}
@@ -112,10 +112,37 @@ func TestRenderIndexPage_progressSyncDisabled(t *testing.T) {
 	}
 }
 
+func TestRenderRoadmapPage_editPath(t *testing.T) {
+	cfg, g, lr := buildMinimalPageFixture(t)
+	tests := []struct {
+		name      string
+		editPaths map[string]string
+		want      string
+		wantNot   string
+	}{
+		{"埋め込まれる", map[string]string{"a": "docs/content/frontend/a.md"}, `"editPath":"docs/content/frontend/a.md"`, ""},
+		{"未指定なら省略", nil, "", `"editPath"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, tt.editPaths)
+			if err != nil {
+				t.Fatalf("RenderRoadmapPage: %v", err)
+			}
+			if tt.want != "" && !strings.Contains(html, tt.want) {
+				t.Errorf("want %s in output", tt.want)
+			}
+			if tt.wantNot != "" && strings.Contains(html, tt.wantNot) {
+				t.Errorf("unexpected %s in output", tt.wantNot)
+			}
+		})
+	}
+}
+
 func TestRenderRoadmapPage_panelStyle(t *testing.T) {
 	cfg, g, lr := buildMinimalPageFixture(t)
 	cfg.Site.Panel = config.Panel{Width: 600, MinWidth: 350, MaxWidth: 900}
-	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil)
+	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("RenderRoadmapPage: %v", err)
 	}

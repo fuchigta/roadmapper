@@ -17,6 +17,7 @@ import (
 	"github.com/fuchigta/roadmapper/internal/layout"
 	"github.com/fuchigta/roadmapper/internal/meta"
 	"github.com/fuchigta/roadmapper/internal/render"
+	"github.com/fuchigta/roadmapper/internal/repo"
 	"github.com/fuchigta/roadmapper/web"
 )
 
@@ -67,6 +68,12 @@ func runBuild(configPath, outDir, basePath string) error {
 	docs, err := content.LoadDir(contentDir)
 	if err != nil {
 		return fmt.Errorf("content ディレクトリの読み込みに失敗: %w", err)
+	}
+
+	// 「この記事を編集」リンク用: configDir のリポジトリルートからの相対パス
+	repoPrefix, err := repo.PathPrefix(configDir)
+	if err != nil {
+		return fmt.Errorf("リポジトリルートの検出に失敗: %w", err)
 	}
 
 	// 出力ディレクトリを作成
@@ -142,6 +149,8 @@ func runBuild(configPath, outDir, basePath string) error {
 			return err
 		}
 
+		editPaths := buildEditPaths(g, docs, repoPrefix)
+
 		// ロードマップ用ディレクトリ
 		rmDir := filepath.Join(outDir, rm.ID)
 		if err := os.MkdirAll(rmDir, 0o755); err != nil {
@@ -150,6 +159,7 @@ func runBuild(configPath, outDir, basePath string) error {
 
 		pageHTML, err := render.RenderRoadmapPage(
 			web.FS, cfg, rm, g, lr, nodeHTML, nodeText, basePath, assetBase, hasMermaid, log, badges,
+			editPaths,
 		)
 		if err != nil {
 			return fmt.Errorf("ロードマップページの生成に失敗: %w", err)
@@ -282,6 +292,24 @@ func lookupDoc(docs map[string]*content.Doc, n *config.Node) (*content.Doc, bool
 	}
 	doc, ok := docs[n.ID]
 	return doc, ok
+}
+
+// buildEditPaths は各ノードの記事ファイルのリポジトリルート相対パスを返す。
+// 記事が存在しないノードは、作成先となる推定パス (<prefix>content/<content or id>.md) を返す。
+func buildEditPaths(g *graph.Graph, docs map[string]*content.Doc, prefix string) map[string]string {
+	out := make(map[string]string, len(g.Nodes))
+	for _, n := range g.Nodes {
+		if doc, ok := lookupDoc(docs, n.Node); ok && doc.RelPath != "" {
+			out[n.ID] = prefix + "content/" + doc.RelPath
+			continue
+		}
+		key := n.ID
+		if n.Node.Content != "" {
+			key = n.Node.Content
+		}
+		out[n.ID] = prefix + "content/" + key + ".md"
+	}
+	return out
 }
 
 // copyContentAssets は content/ 配下のアセットを outDir/content/ にコピーする。
