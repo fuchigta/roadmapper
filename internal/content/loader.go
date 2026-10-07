@@ -17,6 +17,8 @@ import (
 type Frontmatter struct {
 	Title string `yaml:"title"` // 省略可 (roadmap.yml を正とする)
 	Links []Link `yaml:"links"`
+	// Draft が true の記事は下書き。公開ビルドでは本文を出力せず非活性表示にする。
+	Draft bool `yaml:"draft"`
 	// Updated はノードの最終更新日 ("2006-01-02")。
 	Updated string `yaml:"updated"`
 	// Changes はノード単位の改版履歴。

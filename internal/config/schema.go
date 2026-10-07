@@ -110,6 +110,7 @@ type Node struct {
 	Difficulty    Difficulty `yaml:"difficulty"`    // 難易度 (任意)
 	EstimatedTime string     `yaml:"estimatedTime"` // 推定所要時間 (任意, 例: "2h", "3d")
 	Content       string     `yaml:"content"`       // content/<path>.md を明示指定 (任意、拡張子なし)
+	Draft         bool       `yaml:"draft"`         // 下書きノード (任意。公開ビルドでは非活性表示にする)
 }
 
 // Roadmap は1つのロードマップ全体を表す。

@@ -1,6 +1,10 @@
 package config
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestApplyDefaults_panel(t *testing.T) {
 	tests := []struct {
@@ -51,5 +55,38 @@ func TestApplyDefaults_analytics(t *testing.T) {
 				t.Errorf("events=%v exclude=%v", a.EventsEnabled(), a.ExcludeSearchEnabled())
 			}
 		})
+	}
+}
+
+func TestNodeDraft_yaml(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "roadmap.yml")
+	yml := `site:
+  title: T
+roadmaps:
+  - id: r
+    title: R
+    nodes:
+      - id: a
+        title: A
+        type: required
+        draft: true
+      - id: b
+        title: B
+        type: required
+`
+	if err := os.WriteFile(path, []byte(yml), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nodes := cfg.Roadmaps[0].Nodes
+	if !nodes[0].Draft {
+		t.Error("a: draft が true になっていません")
+	}
+	if nodes[1].Draft {
+		t.Error("b: draft の既定は false のはずです")
 	}
 }
