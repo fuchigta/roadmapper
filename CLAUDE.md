@@ -61,7 +61,7 @@ go run ./cmd/roadmapper dev -c demo/roadmap.yml   # Ctrl+C で終了
 cmd/roadmapper/main.go          # CLIエントリ (cobra)
 internal/
   command/                      # CLI サブコマンド実装
-    build.go                    # roadmapper build
+    build.go                    # roadmapper build [--drafts] (resolveDrafts: 下書きノード判定)
     changelog.go                # 改版履歴用のノード→Doc 解決ヘルパ (サブコマンドではない)
     dev.go                      # roadmapper dev (fsnotify + SSE livereload)
     deploy.go                   # roadmapper deploy --target github|gitlab [--branch]
@@ -69,6 +69,7 @@ internal/
     validate.go                 # roadmapper validate [--strict]
   changelog/                    # 改版履歴 (roadmap.yml + frontmatter の集約・検証・Recent 判定)
     changelog.go                # Build / Check / Recent (純粋関数)
+                                # StripNodes / CheckDrafts: 下書きノードの参照除去・検証
   config/                       # roadmap.yml パーサ + バリデーション
     schema.go                   # Config / Site / Roadmap / Node / Link 構造体
     loader.go                   # Load(path) → *Config (applyDefaults で既定値補完)
@@ -92,6 +93,7 @@ internal/
   render/                       # HTML / SVG / Markdown レンダリング
     svg.go                      # RenderSVG / RenderSVGWithBadges(…, updated) → SVG string
     html.go                     # RenderRoadmapPage / RenderIndexPage → HTML string
+    drafts.go                   # Drafts: 下書きノードの扱い (公開ビルド=非活性 / プレビュー=バッジのみ)
     changelog.go                # 改版履歴 (ヘッダー / パネル) の HTML 断片
     markdown.go                 # RenderMarkdown / RenderMarkdownWithBase(body, urlPrefix) → HTML string (goldmark + chroma)
     links.go                    # RenderLinks([]Link) → HTML fragment
@@ -111,6 +113,7 @@ web/                            # ビルド時埋め込みアセット
   embed.go                      # //go:embed templates static
   sync_http_test.go             # progressSync の HTTP 部分を Goja で検証 (app.js の TEST:HTTP_BEGIN〜END を抽出)
   sync_merge_test.go            # マージ規則 (TEST:MERGE_BEGIN〜END) の検証
+  progress_test.go              # 進捗率の下書き除外 (TEST:PROGRESS_BEGIN〜END) の検証
   templates/index.html          # インデックスページ
   templates/roadmap.html        # ロードマップページ
   static/style.css              # CSS variables ベースのテーマ
@@ -176,6 +179,16 @@ docs/                           # roadmapper 自身で作った使い方ガイ�
 - `site.panel` (width / minWidth / maxWidth) の既定値補完は `applyDefaults`、整合性検証は `validatePanel`
 - `site.contentAssets.exclude` は `content.LoadAssets` で `content/` からの相対パスに glob 適用。`content/` の非 `.md` ファイルは `dist/content/` にコピーされ、Markdown 内の相対 URL は `RenderMarkdownWithBase` で書き換える
 
+### 下書きノード (`draft`)
+
+- 指定は `roadmap.yml` のノードの `draft: true` と content frontmatter の `draft: true` の OR。`command.resolveDrafts(g, docs)` が ID 集合を返し、`buildNodeHTML` / `buildEditPaths` / `resolveNodeDocs` が参照する
+- 公開ビルド (既定) は非活性表示: SVG は `<g class="roadmap-node is-draft" data-draft="1" aria-disabled="true">` + `<title>準備中</title>` + 「準備中」ラベル、接続エッジは `roadmap-edge is-draft` (CSS で破線・薄表示)。レイアウト座標は変えない
+- **漏洩防止 (最重要)**: 公開ビルドの下書きは `NodeMeta` の html / text / links / editPath を空にして `draft: true` のみ渡す。本文の固有文字列が HTML に出ないことを `internal/render/drafts_test.go` で検証している。`render.Drafts{IDs, Preview}` の `locked` (公開) / `marked` (プレビュー) で分岐する
+- `app.js` は `isLocked(id)` (`nodeData[id].draft && !SITE_CONFIG.draftPreview`) で `openPanel`・進捗の分母 (`isRequiredNode`)・検索・j/k ナビ・`updateNodeVisuals` から除外し、関連ノード一覧は「準備中」のリンクなし表示にする。localStorage / progressSync の既存進捗は削除しない (計算で無視するだけ)。index ページの分母は Go 側 (`graphNodeOrder` の exclude) で除外する
+- 改版履歴: 下書きの frontmatter は `resolveNodeDocs` の入力から除外し、roadmap.yml の `changelog[].nodes` からの下書き参照は `changelog.StripNodes` で外す (項目自体は残す)。`validate` は `changelog.CheckDrafts` で「nodes が下書きだけ」の項目を警告し、記事未作成の下書きは未解決警告の対象外
+- プレビュー: `runBuild(..., includeDrafts)` が true (`build --drafts` / `dev`) のとき `Preview: true` を渡し、`is-draft-preview` + 「下書き」バッジ (`node-draft-badge`) のみ付けて通常ノードとして出力する。`NodeMeta.Draft` は付けたまま `SITE_CONFIG.draftPreview: true` でフロントが区別する
+- build 終了時に `printDrafts` が「下書き N 件 (非公開 / プレビュー表示)」と ID を表示する
+
 ### アクセス解析 (`site.analytics`)
 - `provider` (umami / plausible / goatcounter / custom) が空なら無効。`render.RenderAnalyticsHead` が `<head>` 用タグを生成する (属性は `html/template` でエスケープ、custom の `head` のみ素通し)
 - アダプタ方式: provider ごとに `window.roadmapperTrack(name, data)` を head で定義し、`app.js` は `track()` 経由でのみ呼ぶ。`SITE_CONFIG.analyticsEvents` が false なら何も送らず、例外は握りつぶす
@@ -185,7 +198,7 @@ docs/                           # roadmapper 自身で作った使い方ガイ�
 ## 禁止事項
 
 - **外部バイナリ依存の追加禁止** — Node.js, graphviz, Python, etc. はインストール不要のまま保つ
-- **フロントエンドフレームワーク追加禁止** — `web/static/app.js` は素の JS のまま維持する (目標 32KB 以内。現状 約 30KB)
+- **フロントエンドフレームワーク追加禁止** — `web/static/app.js` は素の JS のまま維持する (目標 32KB 以内。現状 約 31.5KB)
 - **`filepath.Join` を embed FS パスに使用禁止** — `path.Join` を使うこと
 - **`web/` 以下のファイルをビルド外から直接コピーしない** — `web.FS` 経由でアクセスする
 

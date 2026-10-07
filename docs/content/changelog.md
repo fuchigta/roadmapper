@@ -41,6 +41,7 @@ changes:
 |---|---|
 | `date` が空・`YYYY-MM-DD` でない、`summary` が空、`nodes` に存在しない ID | エラー (`validate` / `build` が失敗) |
 | 未来の日付、`updated` が `changes` / roadmap.yml の changelog より古い | warning (`validate --strict` なら失敗) |
+| `nodes` が下書きノードだけの changelog 項目 | warning (`validate --strict` なら失敗)。公開ビルドでは下書きの `updated` / `changes` は集約されず、`nodes` の下書き参照は外れる |
 
 ## サブタスク
 

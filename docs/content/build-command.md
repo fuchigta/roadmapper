@@ -9,6 +9,8 @@ roadmapper build -c my-roadmap/roadmap.yml -o my-roadmap/dist
 | `-c` / `--config` | `roadmap.yml` | `roadmap.yml` のパス。`content/` はこのファイルと同じディレクトリを基準に読み込む |
 | `-o` / `--out` | `dist` | 出力ディレクトリ |
 | `--base` | 空 | ベースパス (例: `/my-repo/`)。指定すると `site.basePath` より優先される |
+| `--no-analytics` | 無効 | アクセス解析タグを出力しない |
+| `--drafts` | 無効 | 下書きノードを通常ノードとして出力し「下書き」バッジを付ける (ステージング用)。既定では下書きは非活性の「準備中」になり本文を出力しない (「下書きノード」の記事を参照) |
 
 ## 生成されるファイル
 
