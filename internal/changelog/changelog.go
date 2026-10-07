@@ -216,3 +216,50 @@ func Recent(updated map[string]time.Time, now time.Time, days int) map[string]bo
 	}
 	return out
 }
+
+// StripNodes は entries の関連ノード ID から exclude に含まれるものを外した写しを返す。
+// 項目自体は残す。下書きノードへの参照を公開用の履歴から取り除くのに使う。
+// exclude が空なら entries をそのまま返す。
+func StripNodes(entries []config.ChangelogEntry, exclude map[string]bool) []config.ChangelogEntry {
+	if len(exclude) == 0 {
+		return entries
+	}
+	out := make([]config.ChangelogEntry, len(entries))
+	for i, e := range entries {
+		out[i] = e
+		if len(e.Nodes) == 0 {
+			continue
+		}
+		kept := make([]string, 0, len(e.Nodes))
+		for _, id := range e.Nodes {
+			if !exclude[id] {
+				kept = append(kept, id)
+			}
+		}
+		out[i].Nodes = kept
+	}
+	return out
+}
+
+// CheckDrafts は nodes が下書きノードだけを参照している項目の警告を返す。
+// そうした項目は公開ビルドで関連ノードを持たない履歴になる。
+func CheckDrafts(entries []config.ChangelogEntry, drafts map[string]bool) []Warning {
+	var ws []Warning
+	for i, e := range entries {
+		if len(e.Nodes) == 0 {
+			continue
+		}
+		onlyDraft := true
+		for _, id := range e.Nodes {
+			if !drafts[id] {
+				onlyDraft = false
+				break
+			}
+		}
+		if onlyDraft {
+			ws = append(ws, Warning{Message: fmt.Sprintf(
+				"changelog[%d] (%s) の nodes が下書きノードだけを参照しています (公開ビルドでは参照が外れます)", i, e.Date)})
+		}
+	}
+	return ws
+}
