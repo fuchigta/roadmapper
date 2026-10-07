@@ -46,10 +46,13 @@ function setNodeState(nodeId, patch) {
 }
 
 // ===== Progress calculation =====
-// required ノードのみを進捗の分母とする。optional / alternative は対象外。
+// TEST:PROGRESS_BEGIN
+// 公開ビルドの下書きノードは非活性: パネルを開かず、進捗の分母・検索から除く (プレビューでは通常扱い)
+const isLocked = id => !!nodeData[id]?.draft && !cfg.draftPreview;
+// required ノードのみを進捗の分母とする。optional / alternative / 下書きは対象外。
 function isRequiredNode(id) {
   const t = nodeData[id]?.type;
-  return t !== 'optional' && t !== 'alternative';
+  return t !== 'optional' && t !== 'alternative' && !isLocked(id);
 }
 
 function calcRoadmapProgress(rmId) {
@@ -64,6 +67,7 @@ function calcRoadmapProgress(rmId) {
   const done = ids.filter(id => rm[id]?.state === 'done').length;
   return Math.round((done / ids.length) * 100);
 }
+// TEST:PROGRESS_END
 
 function updateProgressBar() {
   const pct = calcRoadmapProgress(roadmapId);
@@ -76,6 +80,7 @@ function updateProgressBar() {
 function updateNodeVisuals() {
   document.querySelectorAll('.roadmap-node[data-id]').forEach(el => {
     const id = el.dataset.id;
+    if (isLocked(id)) return;
     const { state, tasks } = getNodeState(id);
     el.dataset.state = state;
 
@@ -241,6 +246,7 @@ function renderRelations(nodeId) {
       const nd = nodeData[id];
       if (!nd) return;
       const li = document.createElement('li');
+      if (isLocked(id)) { li.textContent = nd.title + '（準備中）'; listEl.appendChild(li); return; }
       const a = document.createElement('a');
       a.href = '#' + id;
       a.textContent = nd.title;
@@ -282,12 +288,12 @@ function openHistory() {
 
 function openPanel(nodeId) {
   const data = nodeData[nodeId];
-  if (!data) return;
+  if (!data || isLocked(nodeId)) return;
   currentNodeId = nodeId;
   track('node_open', { roadmap: roadmapId, node: nodeId });
   panel?.classList.remove('history-mode');
 
-  document.getElementById('panel-title').textContent = data.title;
+  document.getElementById('panel-title').textContent = data.title + (data.draft ? '（下書き）' : '');
 
   // メタデータ (難易度・所要時間)
   const metaEl = document.getElementById('panel-meta');
@@ -397,7 +403,7 @@ function initSearch() {
   if (!input || !results) return;
 
   const idx = Object.entries(nodeData)
-    .filter(([id]) => id !== '__order')
+    .filter(([id]) => id !== '__order' && !isLocked(id))
     .map(([id, d]) => ({
       id,
       title: d.title,
@@ -511,7 +517,7 @@ function initSearch() {
 // ===== キーボードナビゲーション =====
 function initKeyboard() {
   // go 側の json.Marshal はキーをアルファベット順にするため、DAG 順序を __order で渡している
-  const nodeIds = nodeData.__order || Object.keys(nodeData).filter(k => k !== '__order');
+  const nodeIds = (nodeData.__order || Object.keys(nodeData)).filter(k => k !== '__order' && !isLocked(k));
 
   document.addEventListener('keydown', (e) => {
     // 入力フォーカス中は無視
