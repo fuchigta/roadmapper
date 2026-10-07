@@ -13,6 +13,10 @@
   --header-h: 56px;
   --radius: 8px;
   --transition: 200ms ease;
+  --draft-fill: #f1f5f9;
+  --draft-stroke: #94a3b8;
+  --draft-text: #64748b;
+  --draft-badge: #d97706;
 }
 
 [data-theme="dark"] {
@@ -23,6 +27,10 @@
   --text-muted: #94a3b8;
   --shadow: 0 1px 3px rgba(0,0,0,.4);
   --shadow-md: 0 4px 12px rgba(0,0,0,.4);
+  --draft-fill: #1e293b;
+  --draft-stroke: #64748b;
+  --draft-text: #94a3b8;
+  --draft-badge: #b45309;
 }
 
 /* ===== Reset ===== */
@@ -294,6 +302,15 @@ a { color: var(--brand); }
 /* ノード hover */
 .roadmap-node rect { transition: filter .15s, opacity .2s; }
 .roadmap-node:hover rect { filter: brightness(1.1) drop-shadow(0 0 6px color-mix(in srgb, var(--brand) 40%, transparent)); }
+
+/* 下書きノード (公開ビルド: 非活性 / プレビュー: バッジのみ)。後続の dim / highlight が優先されるよう先に置く */
+.roadmap-edge.is-draft { stroke-dasharray: 3 4; opacity: .45; }
+.roadmap-node.is-draft { cursor: default; }
+.roadmap-node.is-draft rect { fill: var(--draft-fill) !important; stroke: var(--draft-stroke) !important; stroke-dasharray: 5 3; filter: none; }
+.roadmap-node.is-draft text { fill: var(--draft-text) !important; }
+.roadmap-node.is-draft .node-draft-label { font-size: 9px; }
+.node-draft-badge rect { fill: var(--draft-badge); }
+.node-draft-badge text { fill: #fff; }
 
 /* 依存関係ハイライト */
 .roadmap-node.dim { opacity: 0.15; }

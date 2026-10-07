@@ -74,8 +74,16 @@ func runValidate(configPath string, strict bool) error {
 		content   string
 	}
 	var unresolved []unresolvedEntry
+	// 下書きノードは記事が未作成でもよい (警告しない)
+	draftSets := make([]map[string]bool, len(graphs))
+	for i, g := range graphs {
+		draftSets[i] = resolveDrafts(g, docs)
+	}
 	for i, g := range graphs {
 		for _, n := range g.Nodes {
+			if draftSets[i][n.ID] {
+				continue
+			}
 			if _, ok := lookupDoc(docs, n.Node); !ok {
 				unresolved = append(unresolved, unresolvedEntry{
 					roadmapID: cfg.Roadmaps[i].ID,
@@ -102,11 +110,15 @@ func runValidate(configPath string, strict bool) error {
 	changelogWarnings := 0
 	for i, g := range graphs {
 		rm := &cfg.Roadmaps[i]
-		nodeDocs := resolveNodeDocs(g, docs)
-		if _, err := changelog.Build(rm.Changelog, nodeDocs); err != nil {
+		// 公開ビルドと同じく、下書きの frontmatter と changelog の下書き参照は検査対象から外す
+		drafts := draftSets[i]
+		entries := changelog.StripNodes(rm.Changelog, drafts)
+		nodeDocs := resolveNodeDocs(g, docs, drafts)
+		if _, err := changelog.Build(entries, nodeDocs); err != nil {
 			return fmt.Errorf("ロードマップ %q の改版履歴が不正: %w", rm.ID, err)
 		}
-		ws := changelog.Check(rm.Changelog, nodeDocs, now)
+		ws := changelog.Check(entries, nodeDocs, now)
+		ws = append(ws, changelog.CheckDrafts(rm.Changelog, drafts)...)
 		if len(ws) == 0 {
 			continue
 		}

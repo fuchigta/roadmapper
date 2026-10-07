@@ -39,7 +39,7 @@ func NewDevCmd() *cobra.Command {
 func runDev(configPath, outDir string, port int) error {
 	// 初回ビルド
 	fmt.Println("初回ビルド中...")
-	if err := runBuild(configPath, outDir, "", true); err != nil {
+	if err := runBuild(configPath, outDir, "", true, true); err != nil {
 		return fmt.Errorf("初回ビルド失敗: %w", err)
 	}
 
@@ -88,7 +88,7 @@ func runDev(configPath, outDir string, port int) error {
 					}
 					timer = time.AfterFunc(debounce, func() {
 						fmt.Printf("\nファイル変更検出: %s\nリビルド中...\n", event.Name)
-						if err := runBuild(configPath, outDir, "", true); err != nil {
+						if err := runBuild(configPath, outDir, "", true, true); err != nil {
 							log.Printf("ビルドエラー: %v", err)
 						} else {
 							srv.Notify()

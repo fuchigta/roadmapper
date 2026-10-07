@@ -42,7 +42,7 @@ func TestRenderRoadmapPage_progressSyncEnabled(t *testing.T) {
 		Enabled:  true,
 		Endpoint: "https://api.example.com/sync",
 	}
-	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil)
+	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil, render.Drafts{})
 	if err != nil {
 		t.Fatalf("RenderRoadmapPage: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestRenderRoadmapPage_progressSyncEnabled(t *testing.T) {
 
 func TestRenderRoadmapPage_progressSyncDisabled(t *testing.T) {
 	cfg, g, lr := buildMinimalPageFixture(t)
-	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil)
+	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil, render.Drafts{})
 	if err != nil {
 		t.Fatalf("RenderRoadmapPage: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestRenderRoadmapPage_progressSyncEndpointTrimsTrailingSlash(t *testing.T) 
 		Enabled:  true,
 		Endpoint: "https://api.example.com/sync/",
 	}
-	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil)
+	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil, render.Drafts{})
 	if err != nil {
 		t.Fatalf("RenderRoadmapPage: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestRenderIndexPage_progressSyncEnabled(t *testing.T) {
 		Enabled:  true,
 		Endpoint: "https://api.example.com/sync",
 	}
-	html, err := render.RenderIndexPage(web.FS, cfg, "/", map[string]*graph.Graph{"test": g}, nil)
+	html, err := render.RenderIndexPage(web.FS, cfg, "/", map[string]*graph.Graph{"test": g}, nil, nil)
 	if err != nil {
 		t.Fatalf("RenderIndexPage: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestRenderIndexPage_progressSyncEnabled(t *testing.T) {
 
 func TestRenderIndexPage_progressSyncDisabled(t *testing.T) {
 	cfg, g, _ := buildMinimalPageFixture(t)
-	html, err := render.RenderIndexPage(web.FS, cfg, "/", map[string]*graph.Graph{"test": g}, nil)
+	html, err := render.RenderIndexPage(web.FS, cfg, "/", map[string]*graph.Graph{"test": g}, nil, nil)
 	if err != nil {
 		t.Fatalf("RenderIndexPage: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestRenderRoadmapPage_editPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, tt.editPaths)
+			html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, tt.editPaths, render.Drafts{})
 			if err != nil {
 				t.Fatalf("RenderRoadmapPage: %v", err)
 			}
@@ -142,7 +142,7 @@ func TestRenderRoadmapPage_editPath(t *testing.T) {
 func TestRenderRoadmapPage_panelStyle(t *testing.T) {
 	cfg, g, lr := buildMinimalPageFixture(t)
 	cfg.Site.Panel = config.Panel{Width: 600, MinWidth: 350, MaxWidth: 900}
-	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil)
+	html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil, render.Drafts{})
 	if err != nil {
 		t.Fatalf("RenderRoadmapPage: %v", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -26,17 +27,18 @@ const recentUpdateDays = 30
 
 func NewBuildCmd() *cobra.Command {
 	var (
-		configPath  string
-		outDir      string
-		basePath    string
-		noAnalytics bool
+		configPath    string
+		outDir        string
+		basePath      string
+		noAnalytics   bool
+		includeDrafts bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "build",
 		Short: "静的サイトを生成する",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runBuild(configPath, outDir, basePath, noAnalytics)
+			return runBuild(configPath, outDir, basePath, noAnalytics, includeDrafts)
 		},
 	}
 
@@ -44,12 +46,15 @@ func NewBuildCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&outDir, "out", "o", "dist", "出力ディレクトリ")
 	cmd.Flags().StringVar(&basePath, "base", "", "ベースパス (例: /my-repo/)")
 	cmd.Flags().BoolVar(&noAnalytics, "no-analytics", false, "アクセス解析タグを出力しない")
+	cmd.Flags().BoolVar(&includeDrafts, "drafts", false, "下書きノードを通常ノードとして出力する (ステージング用)")
 
 	return cmd
 }
 
 // runBuild はサイトを生成する。noAnalytics が true なら site.analytics を無効化する。
-func runBuild(configPath, outDir, basePath string, noAnalytics bool) error {
+// includeDrafts が true なら下書きノードを通常ノードとして出力し「下書き」バッジを付ける (dev / build --drafts)。
+// false なら下書きは非活性表示にし、本文・リンク・改版履歴を出力しない。
+func runBuild(configPath, outDir, basePath string, noAnalytics, includeDrafts bool) error {
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		return err
@@ -118,6 +123,8 @@ func runBuild(configPath, outDir, basePath string, noAnalytics bool) error {
 	// ロードマップ → 改版履歴のマップ (RSS に使う)
 	logs := map[string]*changelog.Log{}
 	now := time.Now()
+	// 下書きノード (ロードマップ ID → ノード ID 集合)。進捗の分母・ログ表示に使う
+	draftsByRoadmap := map[string]map[string]bool{}
 
 	// 各ロードマップを処理
 	for i := range cfg.Roadmaps {
@@ -130,8 +137,16 @@ func runBuild(configPath, outDir, basePath string, noAnalytics bool) error {
 		}
 		graphs[rm.ID] = g
 
-		// 改版履歴を集約
-		log, err := changelog.Build(rm.Changelog, resolveNodeDocs(g, docs))
+		// 下書きノード。公開ビルドでは本文・履歴・編集パスを出力しない (locked)
+		drafts := resolveDrafts(g, docs)
+		draftsByRoadmap[rm.ID] = drafts
+		var locked map[string]bool
+		if !includeDrafts {
+			locked = drafts
+		}
+
+		// 改版履歴を集約 (公開ビルドでは下書きの frontmatter と changelog の下書き参照を除く)
+		log, err := changelog.Build(changelog.StripNodes(rm.Changelog, locked), resolveNodeDocs(g, docs, locked))
 		if err != nil {
 			return fmt.Errorf("ロードマップ %q の改版履歴の構築に失敗: %w", rm.ID, err)
 		}
@@ -151,12 +166,12 @@ func runBuild(configPath, outDir, basePath string, noAnalytics bool) error {
 		}
 
 		// ノード本文を Markdown → HTML / plaintext に変換
-		nodeHTML, nodeText, hasMermaid, err := buildNodeHTML(g, docs, assetBase)
+		nodeHTML, nodeText, hasMermaid, err := buildNodeHTML(g, docs, assetBase, locked)
 		if err != nil {
 			return err
 		}
 
-		editPaths := buildEditPaths(g, docs, repoPrefix)
+		editPaths := buildEditPaths(g, docs, repoPrefix, locked)
 
 		// ロードマップ用ディレクトリ
 		rmDir := filepath.Join(outDir, rm.ID)
@@ -167,6 +182,7 @@ func runBuild(configPath, outDir, basePath string, noAnalytics bool) error {
 		pageHTML, err := render.RenderRoadmapPage(
 			web.FS, cfg, rm, g, lr, nodeHTML, nodeText, basePath, assetBase, hasMermaid, log, badges,
 			editPaths,
+			render.Drafts{IDs: drafts, Preview: includeDrafts},
 		)
 		if err != nil {
 			return fmt.Errorf("ロードマップページの生成に失敗: %w", err)
@@ -178,7 +194,7 @@ func runBuild(configPath, outDir, basePath string, noAnalytics bool) error {
 	}
 
 	// index.html 生成
-	indexHTML, err := render.RenderIndexPage(web.FS, cfg, basePath, graphs, latest)
+	indexHTML, err := render.RenderIndexPage(web.FS, cfg, basePath, graphs, latest, lockedByRoadmap(draftsByRoadmap, includeDrafts))
 	if err != nil {
 		return fmt.Errorf("インデックスページの生成に失敗: %w", err)
 	}
@@ -206,18 +222,25 @@ func runBuild(configPath, outDir, basePath string, noAnalytics bool) error {
 		fmt.Println("  feed.rss を生成しました")
 	}
 
+	printDrafts(cfg, draftsByRoadmap, includeDrafts)
+
 	fmt.Printf("\n✓ %s に出力しました\n", outDir)
 	return nil
 }
 
 // buildNodeHTML は各ノードの Markdown を HTML / plaintext に変換して map 2 つと mermaid 有無を返す。
-func buildNodeHTML(g *graph.Graph, docs map[string]*content.Doc, assetBase string) (map[string]string, map[string]string, bool, error) {
+// locked のノード (公開ビルドの下書き) は本文を読まず空文字列を返す。
+func buildNodeHTML(g *graph.Graph, docs map[string]*content.Doc, assetBase string, locked map[string]bool) (map[string]string, map[string]string, bool, error) {
 	nodeHTML := map[string]string{}
 	nodeText := map[string]string{}
 	hasMermaid := false
 
 	var unresolved []string
 	for _, n := range g.Nodes {
+		if locked[n.ID] {
+			nodeHTML[n.ID], nodeText[n.ID] = "", ""
+			continue
+		}
 		doc, ok := lookupDoc(docs, n.Node)
 		if !ok {
 			nodeHTML[n.ID] = ""
@@ -303,9 +326,13 @@ func lookupDoc(docs map[string]*content.Doc, n *config.Node) (*content.Doc, bool
 
 // buildEditPaths は各ノードの記事ファイルのリポジトリルート相対パスを返す。
 // 記事が存在しないノードは、作成先となる推定パス (<prefix>content/<content or id>.md) を返す。
-func buildEditPaths(g *graph.Graph, docs map[string]*content.Doc, prefix string) map[string]string {
+// locked のノード (公開ビルドの下書き) は記事の場所を出さない。
+func buildEditPaths(g *graph.Graph, docs map[string]*content.Doc, prefix string, locked map[string]bool) map[string]string {
 	out := make(map[string]string, len(g.Nodes))
 	for _, n := range g.Nodes {
+		if locked[n.ID] {
+			continue
+		}
 		if doc, ok := lookupDoc(docs, n.Node); ok && doc.RelPath != "" {
 			out[n.ID] = prefix + "content/" + doc.RelPath
 			continue
@@ -361,4 +388,51 @@ func copyStaticAssets(outDir string) error {
 		}
 	}
 	return nil
+}
+
+// resolveDrafts は下書きノードの ID 集合を返す。
+// roadmap.yml のノードの draft: true、または対応する記事の frontmatter の draft: true のどちらかで下書きになる。
+func resolveDrafts(g *graph.Graph, docs map[string]*content.Doc) map[string]bool {
+	out := map[string]bool{}
+	for _, n := range g.Nodes {
+		if n.Node.Draft {
+			out[n.ID] = true
+			continue
+		}
+		if doc, ok := lookupDoc(docs, n.Node); ok && doc.Frontmatter.Draft {
+			out[n.ID] = true
+		}
+	}
+	return out
+}
+
+// lockedByRoadmap は index ページの進捗から除くノードを返す。プレビュー (includeDrafts) では除外しない。
+func lockedByRoadmap(drafts map[string]map[string]bool, includeDrafts bool) map[string]map[string]bool {
+	if includeDrafts {
+		return nil
+	}
+	return drafts
+}
+
+// printDrafts は下書きノードの件数と ID を表示する。
+func printDrafts(cfg *config.Config, drafts map[string]map[string]bool, includeDrafts bool) {
+	var lines []string
+	for _, rm := range cfg.Roadmaps {
+		ids := make([]string, 0, len(drafts[rm.ID]))
+		for id := range drafts[rm.ID] {
+			ids = append(ids, id)
+		}
+		sort.Strings(ids)
+		for _, id := range ids {
+			lines = append(lines, fmt.Sprintf("    - [%s] %s", rm.ID, id))
+		}
+	}
+	if len(lines) == 0 {
+		return
+	}
+	mode := "非公開"
+	if includeDrafts {
+		mode = "プレビュー表示"
+	}
+	fmt.Printf("  下書き %d 件 (%s):\n%s\n", len(lines), mode, strings.Join(lines, "\n"))
 }

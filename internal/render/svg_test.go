@@ -112,7 +112,7 @@ func TestRenderSVGWithBadges_updatedBadge(t *testing.T) {
 		t.Fatal(err)
 	}
 	d := time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)
-	got := render.RenderSVGWithBadges(g, lr, cfg.Site.BrandColor, map[string]time.Time{"a": d})
+	got := render.RenderSVGWithBadges(g, lr, cfg.Site.BrandColor, map[string]time.Time{"a": d}, render.Drafts{})
 	if n := strings.Count(got, `class="node-updated"`); n != 1 {
 		t.Errorf("badge count = %d, want 1", n)
 	}

@@ -37,12 +37,13 @@ var nodeColor = map[config.NodeType]struct{ fill, stroke, text string }{
 
 // RenderSVG は更新バッジなしで graph g を SVG 文字列に変換する。
 func RenderSVG(g *graph.Graph, lr *layout.Result, brandColor string) string {
-	return RenderSVGWithBadges(g, lr, brandColor, nil)
+	return RenderSVGWithBadges(g, lr, brandColor, nil, Drafts{})
 }
 
 // RenderSVGWithBadges は graph g を SVG 文字列に変換する。
 // updated に含まれるノード (ノード ID → 更新日) には「更新」バッジを描く。
-func RenderSVGWithBadges(g *graph.Graph, lr *layout.Result, brandColor string, updated map[string]time.Time) string {
+// drafts の下書きノードは、公開ビルドでは非活性 (「準備中」) で、プレビューでは「下書き」バッジ付きで描く。
+func RenderSVGWithBadges(g *graph.Graph, lr *layout.Result, brandColor string, updated map[string]time.Time, drafts Drafts) string {
 	w := lr.Width + svgPadding*2
 	h := lr.Height + svgPadding*2
 
@@ -65,13 +66,13 @@ func RenderSVGWithBadges(g *graph.Graph, lr *layout.Result, brandColor string, u
 	// エッジを先に描く (ノードの下になるように)
 	for _, n := range g.Nodes {
 		for _, child := range n.ChildrenNodes {
-			renderEdge(&sb, n, child, lr)
+			renderEdge(&sb, n, child, lr, drafts)
 		}
 	}
 
 	// ノードを描く
 	for _, n := range g.Nodes {
-		renderNode(&sb, n, lr, updated)
+		renderNode(&sb, n, lr, updated, drafts)
 	}
 
 	sb.WriteString(`</g></svg>`)
@@ -95,7 +96,7 @@ func buildDefs() string {
 </defs>`
 }
 
-func renderNode(sb *strings.Builder, n *graph.Node, lr *layout.Result, updated map[string]time.Time) {
+func renderNode(sb *strings.Builder, n *graph.Node, lr *layout.Result, updated map[string]time.Time, drafts Drafts) {
 	nl, ok := lr.Nodes[n.ID]
 	if !ok {
 		return
@@ -117,15 +118,25 @@ func renderNode(sb *strings.Builder, n *graph.Node, lr *layout.Result, updated m
 		childIDs[i] = c.ID
 	}
 
-	// ノード外枠 (クリッカブル要素)
+	// ノード外枠 (クリッカブル要素。公開ビルドの下書きは非活性)
+	class, draftAttr, cursor := "roadmap-node", "", "pointer"
+	switch {
+	case drafts.locked(n.ID):
+		class, draftAttr, cursor = "roadmap-node is-draft", ` data-draft="1" aria-disabled="true"`, "default"
+	case drafts.marked(n.ID):
+		class, draftAttr = "roadmap-node is-draft-preview", ` data-draft="1"`
+	}
 	fmt.Fprintf(sb,
-		`<g class="roadmap-node" data-id=%q data-type=%q `+
-			`data-parents=%q data-children=%q `+
+		`<g class="%s" data-id=%q data-type=%q `+
+			`data-parents=%q data-children=%q%s `+
 			`transform="translate(%v,%v)" `+
-			`style="cursor:pointer">`,
-		n.ID, string(n.Node.Type),
-		strings.Join(parentIDs, ","), strings.Join(childIDs, ","),
-		0, 0)
+			`style="cursor:%s">`,
+		class, n.ID, string(n.Node.Type),
+		strings.Join(parentIDs, ","), strings.Join(childIDs, ","), draftAttr,
+		0, 0, cursor)
+	if drafts.locked(n.ID) {
+		sb.WriteString(`<title>準備中</title>`)
+	}
 
 	// 影付き矩形
 	fmt.Fprintf(sb,
@@ -193,6 +204,20 @@ func renderNode(sb *strings.Builder, n *graph.Node, lr *layout.Result, updated m
 			x+11, y+8, diffLabel)
 	}
 
+	// 下書きの印: 公開ビルドは「準備中」ラベル、プレビューは「下書き」バッジ (下辺中央。更新バッジは右下)
+	if drafts.locked(n.ID) {
+		fmt.Fprintf(sb,
+			`<text class="node-draft-label" x="%v" y="%v" text-anchor="middle" dominant-baseline="middle" `+
+				`font-family="system-ui,sans-serif" font-size="9">準備中</text>`,
+			nl.X, y+nl.Height-8)
+	} else if drafts.marked(n.ID) {
+		fmt.Fprintf(sb,
+			`<g class="node-draft-badge"><rect x="%v" y="%v" width="34" height="14" rx="7"/>`+
+				`<text x="%v" y="%v" text-anchor="middle" dominant-baseline="middle" `+
+				`font-family="system-ui,sans-serif" font-size="8" font-weight="bold">下書き</text></g>`,
+			nl.X-17, y+nl.Height-7, nl.X, y+nl.Height)
+	}
+
 	// 更新バッジ (右下。進捗インジケーターは右上、type バッジは右上内側のため重ならない)
 	if d, ok := updated[n.ID]; ok {
 		label := d.Format("2006-01-02") + " 更新"
@@ -207,7 +232,7 @@ func renderNode(sb *strings.Builder, n *graph.Node, lr *layout.Result, updated m
 	sb.WriteString(`</g>`)
 }
 
-func renderEdge(sb *strings.Builder, parent, child *graph.Node, lr *layout.Result) {
+func renderEdge(sb *strings.Builder, parent, child *graph.Node, lr *layout.Result, drafts Drafts) {
 	pnl, ok1 := lr.Nodes[parent.ID]
 	cnl, ok2 := lr.Nodes[child.ID]
 	if !ok1 || !ok2 {
@@ -250,6 +275,11 @@ func renderEdge(sb *strings.Builder, parent, child *graph.Node, lr *layout.Resul
 		cx2, cy2 = x2, midY
 	}
 
+	edgeClass := "roadmap-edge"
+	if drafts.locked(parent.ID) || drafts.locked(child.ID) {
+		edgeClass += " is-draft"
+	}
+
 	var dashAttr string
 	if style.Dash != "none" {
 		dashAttr = fmt.Sprintf(`stroke-dasharray="%s"`, style.Dash)
@@ -259,12 +289,12 @@ func renderEdge(sb *strings.Builder, parent, child *graph.Node, lr *layout.Resul
 		`<path d="M %v %v C %v %v %v %v %v %v" `+
 			`fill="none" stroke="%s" stroke-width="1.5" %s `+
 			`marker-end="url(#%s)" `+
-			`data-source=%q data-target=%q data-type=%q class="roadmap-edge"/>`,
+			`data-source=%q data-target=%q data-type=%q class="%s"/>`,
 		x1, y1,
 		cx1, cy1, cx2, cy2,
 		x2, y2,
 		style.Color, dashAttr, markerID,
-		parent.ID, child.ID, string(child.Node.Type))
+		parent.ID, child.ID, string(child.Node.Type), edgeClass)
 }
 
 func escapeXML(s string) string {

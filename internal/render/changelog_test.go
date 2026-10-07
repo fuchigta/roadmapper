@@ -32,7 +32,7 @@ func TestRenderRoadmapPage_changelog(t *testing.T) {
 
 	t.Run("履歴なし", func(t *testing.T) {
 		for _, lg := range []*changelog.Log{nil, {}} {
-			html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nodeHTML, nil, "/", "../", false, lg, nil, nil)
+			html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nodeHTML, nil, "/", "../", false, lg, nil, nil, render.Drafts{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -45,7 +45,7 @@ func TestRenderRoadmapPage_changelog(t *testing.T) {
 	})
 
 	t.Run("履歴あり", func(t *testing.T) {
-		html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nodeHTML, nil, "/", "../", false, sampleLog(), nil, nil)
+		html, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nodeHTML, nil, "/", "../", false, sampleLog(), nil, nil, render.Drafts{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -74,7 +74,7 @@ func TestRenderRoadmapPage_changelog(t *testing.T) {
 	})
 
 	t.Run("呼び出し元の nodeHTML を変更しない", func(t *testing.T) {
-		if _, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nodeHTML, nil, "/", "../", false, sampleLog(), nil, nil); err != nil {
+		if _, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nodeHTML, nil, "/", "../", false, sampleLog(), nil, nil, render.Drafts{}); err != nil {
 			t.Fatal(err)
 		}
 		if nodeHTML["a"] != "<p>body</p>" {
@@ -87,7 +87,7 @@ func TestRenderIndexPage_latestUpdated(t *testing.T) {
 	cfg, g, _ := buildMinimalPageFixture(t)
 	graphs := map[string]*graph.Graph{"test": g}
 
-	html, err := render.RenderIndexPage(web.FS, cfg, "/", graphs, map[string]time.Time{"test": time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)})
+	html, err := render.RenderIndexPage(web.FS, cfg, "/", graphs, map[string]time.Time{"test": time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestRenderIndexPage_latestUpdated(t *testing.T) {
 	}
 
 	for _, latest := range []map[string]time.Time{nil, {"test": {}}} {
-		html, err = render.RenderIndexPage(web.FS, cfg, "/", graphs, latest)
+		html, err = render.RenderIndexPage(web.FS, cfg, "/", graphs, latest, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -103,11 +103,11 @@ func TestRenderPages_analyticsHead(t *testing.T) {
 			cfg, g, lr := buildMinimalPageFixture(t)
 			cfg.Site.Analytics = tt.a
 
-			page, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil)
+			page, err := render.RenderRoadmapPage(web.FS, cfg, &cfg.Roadmaps[0], g, lr, nil, nil, "/", "../", false, nil, nil, nil, render.Drafts{})
 			if err != nil {
 				t.Fatalf("RenderRoadmapPage: %v", err)
 			}
-			index, err := render.RenderIndexPage(web.FS, cfg, "/", map[string]*graph.Graph{"test": g}, nil)
+			index, err := render.RenderIndexPage(web.FS, cfg, "/", map[string]*graph.Graph{"test": g}, nil, nil)
 			if err != nil {
 				t.Fatalf("RenderIndexPage: %v", err)
 			}
