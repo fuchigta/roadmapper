@@ -1,4 +1,6 @@
 ---
+# 下書き: 公開ビルドでは「準備中」の非活性ノードになり、本文は出力されません (dev / build --drafts では確認できます)
+draft: true
 links:
   - { title: "Svelte ドキュメント", url: "https://svelte.dev/docs" }
 ---

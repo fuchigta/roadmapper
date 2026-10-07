@@ -173,3 +173,84 @@ func TestRecent(t *testing.T) {
 		t.Error("nil input should give empty set")
 	}
 }
+
+func TestStripNodes(t *testing.T) {
+	entries := []config.ChangelogEntry{
+		{Date: "2026-01-01", Summary: "a", Nodes: []string{"x", "d"}},
+		{Date: "2026-01-02", Summary: "b", Nodes: []string{"d"}},
+		{Date: "2026-01-03", Summary: "c"},
+	}
+	tests := []struct {
+		name    string
+		exclude map[string]bool
+		want    [][]string
+	}{
+		{"除外なし", nil, [][]string{{"x", "d"}, {"d"}, nil}},
+		{"d を除外", map[string]bool{"d": true}, [][]string{{"x"}, {}, nil}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := StripNodes(entries, tt.exclude)
+			if len(got) != len(entries) {
+				t.Fatalf("len = %d", len(got))
+			}
+			for i, w := range tt.want {
+				if len(got[i].Nodes) != len(w) {
+					t.Errorf("entry %d: nodes = %v, want %v", i, got[i].Nodes, w)
+				}
+				if got[i].Summary != entries[i].Summary {
+					t.Errorf("entry %d: summary が変わっています", i)
+				}
+			}
+		})
+	}
+	if len(entries[0].Nodes) != 2 {
+		t.Error("入力が書き換えられています")
+	}
+}
+
+func TestCheckDrafts(t *testing.T) {
+	entries := []config.ChangelogEntry{
+		{Date: "2026-01-01", Summary: "mixed", Nodes: []string{"x", "d"}},
+		{Date: "2026-01-02", Summary: "draft only", Nodes: []string{"d"}},
+		{Date: "2026-01-03", Summary: "no nodes"},
+	}
+	got := CheckDrafts(entries, map[string]bool{"d": true})
+	if len(got) != 1 || !strings.Contains(got[0].Message, "changelog[1]") {
+		t.Fatalf("got %+v, want changelog[1] のみ", got)
+	}
+	if got := CheckDrafts(entries, nil); len(got) != 0 {
+		t.Errorf("下書きなしなら警告なし: %+v", got)
+	}
+}
+
+// 下書きの frontmatter (updated / changes) は呼び出し側が入力から除外すれば集約されない。
+func TestBuild_draftDocsExcluded(t *testing.T) {
+	pub := &content.Doc{Frontmatter: content.Frontmatter{Updated: "2026-02-01"}}
+	draft := &content.Doc{Frontmatter: content.Frontmatter{
+		Draft: true, Updated: "2026-03-01",
+		Changes: []content.Change{{Date: "2026-03-01", Summary: "SECRET"}},
+	}}
+	docs := map[string]*content.Doc{"pub": pub, "draft": draft}
+	delete(docs, "draft")
+	log, err := Build(StripNodes(
+		[]config.ChangelogEntry{{Date: "2026-01-01", Summary: "s", Nodes: []string{"draft"}}},
+		map[string]bool{"draft": true}), docs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := log.NodeUpdated["draft"]; ok {
+		t.Error("下書きノードが NodeUpdated に含まれています")
+	}
+	if _, ok := log.NodeItems["draft"]; ok {
+		t.Error("下書きノードが NodeItems に含まれています")
+	}
+	for _, it := range log.Items {
+		if it.Summary == "SECRET" {
+			t.Error("下書きの changes が集約されています")
+		}
+	}
+	if len(log.Items) != 1 {
+		t.Errorf("roadmap.yml 由来の項目は残るはず: %d", len(log.Items))
+	}
+}

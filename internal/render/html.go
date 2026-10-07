@@ -27,6 +27,8 @@ type NodeMeta struct {
 	EstimatedTime string        `json:"estimatedTime,omitempty"`
 	// EditPath は記事ファイルのリポジトリルート相対パス (`/` 区切り)。「この記事を編集」リンク用。
 	EditPath string `json:"editPath,omitempty"`
+	// Draft は下書きノード。公開ビルドでは html / text / links / editPath を空にして draft のみを渡す (本文を漏らさない)。
+	Draft bool `json:"draft,omitempty"`
 }
 
 // RenderRoadmapPage は roadmap.html を使ってロードマップページの HTML を生成する。
@@ -44,6 +46,7 @@ func RenderRoadmapPage(
 	log *changelog.Log, // 改版履歴 (nil または空なら履歴 UI を出さない)
 	badges map[string]time.Time, // 更新バッジを付けるノード ID → 更新日 (nil 可)
 	editPaths map[string]string, // ノード ID → 記事のリポジトリルート相対パス (nil 可)
+	drafts Drafts, // 下書きノードの扱い (ゼロ値なら下書きなし)
 ) (string, error) {
 	colors := DeriveColors(cfg.Site.BrandColor)
 
@@ -56,6 +59,9 @@ func RenderRoadmapPage(
 			withHist[id] = h
 		}
 		for _, n := range g.Nodes {
+			if drafts.locked(n.ID) {
+				continue
+			}
 			if sec := renderNodeHistory(log, n.ID, titles); sec != "" {
 				withHist[n.ID] += sec
 			}
@@ -63,7 +69,7 @@ func RenderRoadmapPage(
 		nodeHTML = withHist
 	}
 
-	nodeMeta, nodeOrder := buildNodeMeta(g, nodeHTML, nodeText, editPaths)
+	nodeMeta, nodeOrder := buildNodeMeta(g, nodeHTML, nodeText, editPaths, drafts)
 	nodeDataJSON, err := json.Marshal(nodeMeta)
 	if err != nil {
 		return "", err
@@ -73,7 +79,7 @@ func RenderRoadmapPage(
 		return "", err
 	}
 
-	svgStr := RenderSVGWithBadges(g, lr, cfg.Site.BrandColor, badges)
+	svgStr := RenderSVGWithBadges(g, lr, cfg.Site.BrandColor, badges, drafts)
 
 	ogpURL := ""
 	if base := meta.SiteBase(cfg.Site.SiteURL, basePath); base != "" {
@@ -99,6 +105,7 @@ func RenderRoadmapPage(
 		"NodeDataJSON":     template.JS(nodeDataJSON),
 		"NodeOrderJSON":    template.JS(nodeOrderJSON),
 		"HasMermaid":       hasMermaid,
+		"DraftPreview":     drafts.Preview,
 		"OGPUrl":           ogpURL,
 		"ChromaCSS":        template.CSS(ChromaCSS()),
 	}
@@ -119,6 +126,7 @@ func RenderIndexPage(
 	basePath string,
 	graphs map[string]*graph.Graph,
 	latest map[string]time.Time, // ロードマップID → 最新更新日 (zero または未登録なら表示しない)
+	locked map[string]map[string]bool, // ロードマップ ID → 進捗の分母から除く非公開 (下書き) ノード ID 集合 (nil 可)
 ) (string, error) {
 	colors := DeriveColors(cfg.Site.BrandColor)
 
@@ -130,7 +138,7 @@ func RenderIndexPage(
 
 	nodeIds := map[string][]string{}
 	for rmID, g := range graphs {
-		nodeIds[rmID] = graphNodeOrder(g)
+		nodeIds[rmID] = graphNodeOrder(g, locked[rmID])
 	}
 	nodeIdsJSON, _ := json.Marshal(nodeIds)
 
@@ -170,10 +178,11 @@ func RenderIndexPage(
 
 // graphNodeOrder は g.Nodes の DAG 順序で required ノードの ID スライスを返す。
 // optional / alternative ノードは進捗の分母に含めないためここで除外する。
-func graphNodeOrder(g *graph.Graph) []string {
+// exclude に含まれるノード (非公開の下書き) も除外する。
+func graphNodeOrder(g *graph.Graph, exclude map[string]bool) []string {
 	order := make([]string, 0, len(g.Nodes))
 	for _, n := range g.Nodes {
-		if n.Node.Type == config.NodeTypeOptional || n.Node.Type == config.NodeTypeAlternative {
+		if n.Node.Type == config.NodeTypeOptional || n.Node.Type == config.NodeTypeAlternative || exclude[n.ID] {
 			continue
 		}
 		order = append(order, n.ID)
@@ -183,7 +192,7 @@ func graphNodeOrder(g *graph.Graph) []string {
 
 // buildNodeMeta は g.Nodes を1パスでメタデータマップと DAG 順序スライスを返す。
 // nodeHTML / nodeText が nil の場合は対応フィールドを空にする。
-func buildNodeMeta(g *graph.Graph, nodeHTML, nodeText, editPaths map[string]string) (map[string]NodeMeta, []string) {
+func buildNodeMeta(g *graph.Graph, nodeHTML, nodeText, editPaths map[string]string, drafts Drafts) (map[string]NodeMeta, []string) {
 	meta := make(map[string]NodeMeta, len(g.Nodes))
 	order := make([]string, len(g.Nodes))
 	for i, n := range g.Nodes {
@@ -206,6 +215,14 @@ func buildNodeMeta(g *graph.Graph, nodeHTML, nodeText, editPaths map[string]stri
 			Difficulty:    string(n.Node.Difficulty),
 			EstimatedTime: n.Node.EstimatedTime,
 			EditPath:      editPaths[n.ID],
+		}
+		if drafts.IDs[n.ID] {
+			m := meta[n.ID]
+			m.Draft = true
+			if drafts.locked(n.ID) {
+				m.HTML, m.Text, m.Links, m.EditPath = "", "", nil, ""
+			}
+			meta[n.ID] = m
 		}
 		order[i] = n.ID
 	}

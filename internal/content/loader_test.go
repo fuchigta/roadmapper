@@ -289,3 +289,27 @@ func TestParse_emptyBody(t *testing.T) {
 		t.Errorf("expected empty body, got %q", doc.Body)
 	}
 }
+
+func TestParse_draft(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want bool
+	}{
+		{"draft: true", "---\ndraft: true\n---\n本文\n", true},
+		{"draft: false", "---\ndraft: false\n---\n本文\n", false},
+		{"未指定", "---\ntitle: X\n---\n本文\n", false},
+		{"frontmatter なし", "本文\n", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doc, err := content.Parse([]byte(tt.raw), "x")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if doc.Frontmatter.Draft != tt.want {
+				t.Errorf("Draft = %v, want %v", doc.Frontmatter.Draft, tt.want)
+			}
+		})
+	}
+}

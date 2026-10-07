@@ -95,6 +95,9 @@ roadmaps:
           - id: changelog
             title: 改版履歴 (changelog)
             type: optional
+          - id: draft-nodes
+            title: 下書きノード (draft)
+            type: optional
 
   - id: publish
     title: 公開

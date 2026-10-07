@@ -5,7 +5,7 @@
 | 区分 | 例 | exit code |
 |---|---|---|
 | エラー | `title` / `id` の欠落、ID の重複、存在しない親、不正な `type` / `difficulty`、循環参照、不正な日付形式、`progressSync` / `panel` の不整合 | 1 |
-| warning | ノードに対応する `content/*.md` がない、改版履歴の不整合 (未来の日付など) | 0 |
+| warning | ノードに対応する `content/*.md` がない、改版履歴の不整合 (未来の日付など)、`changelog` の `nodes` が下書きノードだけを参照している | 0 |
 
 `--strict` を付けると、warning が 1 件でもあれば exit code 1 で終了します。
 

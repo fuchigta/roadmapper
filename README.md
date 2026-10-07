@@ -105,9 +105,12 @@ Flags:
   -o, --out string      出力ディレクトリ (default "dist")
       --base string     ベースパス (例: /my-repo/)
       --no-analytics    アクセス解析タグを出力しない
+      --drafts          下書きノードを通常ノードとして出力する (ステージング用)
 ```
 
 GitHub Pages のサブパスにデプロイする場合は `--base /リポジトリ名/` を指定します。`roadmapper deploy` が生成する CI では自動設定されます。
+
+下書きノード (`draft: true`) は既定では非活性の「準備中」ノードとして出力され、本文は含まれません。`--drafts` を付けると通常ノードとして出力し「下書き」バッジを付けます (ステージング用)。詳しくは[下書きノード](#下書きノード-draft)を参照してください。
 
 ### `roadmapper dev`
 
@@ -121,6 +124,7 @@ Flags:
 ```
 
 `roadmap.yml` と `content/` ディレクトリ (サブディレクトリを含む) を監視し、変更時に自動リビルド・ブラウザリロードします。
+下書きノードは通常ノードとして表示し、「下書き」バッジを付けます。
 
 ### `roadmapper deploy`
 
@@ -192,6 +196,7 @@ roadmaps:
         parents: [html]               # 複数親 → DAG
         difficulty: beginner          # beginner / intermediate / advanced (任意)
         estimatedTime: "3d"           # 推定所要時間 (任意, 例: "2h", "3d")
+        draft: true                   # 下書き (任意, 公開ビルドでは「準備中」の非活性ノードになる)
         content: frontend/css         # content/frontend/css.md を明示指定 (任意, 拡張子なし)
         x: 300                        # 手動 X 座標 (任意, 自動レイアウトを上書き)
         y: 200                        # 手動 Y 座標 (任意, 自動レイアウトを上書き)
@@ -275,6 +280,7 @@ graph LR; HTML --> CSS --> JS
 - `- [ ]` のチェックリストは進捗トラッキングに自動連動します (初期状態は常に未チェックで、`- [x]` は初期値になりません)
 - mermaid コードブロックはブラウザ側で描画されます (mermaid ライブラリを CDN (cdn.jsdelivr.net) から読み込むため、オフラインでは図が表示されません。mermaid を含むロードマップページのみ読み込まれます)
 - frontmatter の `updated` / `changes` は改版履歴用です (後述)
+- frontmatter の `draft: true` で記事を下書きにできます (後述)
 - `links:` は frontmatter と `roadmap.yml` 両方に書けます (frontmatter が優先)
 
 ### content/ のサブディレクトリ
@@ -341,6 +347,38 @@ site:
 パターンは `content/` からの相対パスに対して評価されます。
 `.` で始まる隠しディレクトリは常にスキャン対象外です。
 
+## 下書きノード (draft)
+
+まだ公開したくないノードは `draft: true` で下書きにできます。指定方法は次の 2 つで、どちらかが `true` なら下書きです。
+
+```yaml
+# content/css.md の frontmatter
+---
+draft: true
+---
+```
+
+```yaml
+# roadmap.yml のノード (記事をまだ作っていないノード向け)
+      - id: css
+        title: CSS
+        draft: true
+```
+
+**公開ビルド (`roadmapper build` の既定)** では、下書きノードは非活性の「準備中」ノードとして残ります。
+ノードとエッジの位置は変わらず、クリックしてもパネルは開きません。
+
+- 本文・リンク・編集パスは HTML のどこにも出力されません (ノードのタイトルと親子関係だけが残ります)
+- 進捗率 (ロードマップページ・インデックスのカード) の分母・分子から除外されます。ブラウザに保存済みの進捗は削除されません
+- 全文検索の対象外で、他ノードの関連ノード一覧には「準備中」とリンクなしで表示されます
+- 改版履歴に下書きの `updated` / `changes` は集約されず、更新バッジ・RSS にも出ません。
+  roadmap.yml の `changelog` の `nodes` に下書きノードがあれば、その参照だけ外します (項目自体は残ります)
+- ビルド終了時に「下書き N 件 (非公開)」と ID を表示します
+
+**プレビュー**: `roadmapper dev` と `roadmapper build --drafts` は、下書きを通常ノードとして出力し「下書き」バッジを付けます (ステージング用。本番には使わないでください)。
+
+`roadmapper validate` は、記事が未作成の下書きノードを警告しません。`changelog` の `nodes` が下書きノードだけを参照している項目は警告します (`--strict` で失敗)。
+
 ## 改版履歴 (changelog)
 
 ロードマップの更新履歴を 2 か所で書けます。日付はすべて `YYYY-MM-DD` 形式です。
@@ -378,6 +416,7 @@ changes:
 
 `roadmapper validate` は、未来の日付や、`updated` が `changes` / roadmap.yml の changelog より古い
 といった不整合を警告します。`--strict` を付けると警告があれば失敗します (日付形式の誤りは常にエラー)。
+下書きノードの `updated` / `changes` は集約されません ([下書きノード](#下書きノード-draft))。
 
 ## OGP / sitemap / RSS
 
