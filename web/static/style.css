@@ -444,8 +444,19 @@ a { color: var(--brand); }
 }
 
 /* Markdown content inside panel */
-.panel-content h2 { font-size: 1rem; margin: 16px 0 6px; }
-.panel-content h3 { font-size: .9rem; margin: 12px 0 4px; }
+.panel-content h1,
+.panel-content h2,
+.panel-content h3,
+.panel-content h4,
+.panel-content h5,
+.panel-content h6 { line-height: 1.4; font-weight: 700; }
+.panel-content h1 { font-size: 1.15rem; margin: 20px 0 8px; }
+.panel-content h2 { font-size: 1.05rem; margin: 16px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.panel-content h3 { font-size: 1rem; margin: 14px 0 4px; }
+.panel-content h4 { font-size: .95rem; margin: 12px 0 4px; }
+.panel-content h5 { font-size: .9rem; margin: 10px 0 4px; }
+.panel-content h6 { font-size: .85rem; margin: 10px 0 4px; color: var(--text-muted); }
+.panel-content > :first-child { margin-top: 0; }
 .panel-content p { margin-bottom: 10px; font-size: .9rem; }
 .panel-content ul, .panel-content ol { padding-left: 20px; margin-bottom: 10px; }
 .panel-content li { font-size: .9rem; margin-bottom: 4px; }
