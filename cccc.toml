@@ -1,0 +1,14 @@
+# cccc (https://github.com/moznion/cccc) の複雑度検査設定。
+# CI の .github/workflows/complexity.yml とローカルの `cccc .` で同じ設定を使う。
+
+# internal/layout/vendor/ は同梱している minified な dagre.js (サードパーティ製)。
+# 自前で保守するコードではなく、minify により関数単位の値も意味を持たないため計測対象から外す。
+exclude = ["internal/layout/vendor/**"]
+
+# 閾値は「現状より悪化させない」ためのラチェット。
+# 標準的な目安 (認知的 15 / 循環的 10) では既存コードが通らないため、
+# 導入時点の実測最大値 (vendor 除外後 56 ファイル・449 関数) の少し上に置く:
+#   認知的複雑度 max 42 / 循環的複雑度 max 31 (いずれも internal/command/build.go の runBuild)
+# リファクタで最大値が下がったら、この閾値も下げて締めていく。
+max-cognitive = 44
+max-cyclomatic = 33

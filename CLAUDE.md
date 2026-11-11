@@ -33,6 +33,10 @@ spotter check --range origin/master..HEAD   # push 前の範囲を手元で検�
 違反したらドキュメントを直すのが原則。ドキュメントに影響しない変更なら、コミットメッセージ末尾のトレーラで理由付きで免除する (例: `Doc-Sync: skip[README.md] 内部リファクタでフラグは不変`)。
 検査を追加・変更したら `spotter config lint` で死んだ設定がないか確認し、`spotter config explain <検査名>` で抽出結果 (consistency の要素・doc-paths の候補など) が意図どおりか確かめる。
 
+### 複雑度検査 (`cccc.toml`)
+
+[cccc](https://github.com/moznion/cccc) で関数ごとの認知的複雑度・循環的複雑度を検査する。CI は `.github/workflows/complexity.yml` (master への push と pull_request)、閾値と除外 (`internal/layout/vendor/**`) は `cccc.toml`、ローカルでは `cccc .` で実行する。閾値は導入時の最大値を基準にしたラチェットなので、超えたら閾値を上げずに関数を分割する。
+
 ## 必須コマンド
 
 ```bash
