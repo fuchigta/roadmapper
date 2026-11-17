@@ -55,16 +55,9 @@ func NewBuildCmd() *cobra.Command {
 // includeDrafts が true なら下書きノードを通常ノードとして出力し「下書き」バッジを付ける (dev / build --drafts)。
 // false なら下書きは非活性表示にし、本文・リンク・改版履歴を出力しない。
 func runBuild(configPath, outDir, basePath string, noAnalytics, includeDrafts bool) error {
-	cfg, err := config.Load(configPath)
+	cfg, err := loadBuildConfig(configPath, noAnalytics)
 	if err != nil {
 		return err
-	}
-	if err := config.Validate(cfg); err != nil {
-		return err
-	}
-
-	if noAnalytics {
-		cfg.Site.Analytics.Provider = ""
 	}
 
 	// basePath: フラグ優先、なければ config
@@ -88,143 +81,219 @@ func runBuild(configPath, outDir, basePath string, noAnalytics, includeDrafts bo
 		return fmt.Errorf("リポジトリルートの検出に失敗: %w", err)
 	}
 
-	// 出力ディレクトリを作成
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
-		return fmt.Errorf("出力ディレクトリを作成できません: %w", err)
-	}
-
-	// 静的アセット (style.css / app.js) をコピー
-	if err := copyStaticAssets(outDir); err != nil {
+	if err := prepareOutDir(outDir, contentDir, cfg.Site.ContentAssets.Exclude); err != nil {
 		return err
 	}
 
-	// content/ 配下の非 .md ファイルを dist/content/ にコピー
-	assets, err := content.LoadAssets(contentDir, cfg.Site.ContentAssets.Exclude)
-	if err != nil {
-		return err
+	env := &buildEnv{
+		cfg:           cfg,
+		docs:          docs,
+		outDir:        outDir,
+		basePath:      basePath,
+		assetBase:     resolveAssetBase(basePath),
+		repoPrefix:    repoPrefix,
+		includeDrafts: includeDrafts,
+		now:           time.Now(),
 	}
-	if err := copyContentAssets(outDir, assets); err != nil {
-		return err
-	}
-
-	// assetBase: basePath が空のときはルートへの相対パス "../"
-	assetBase := "../"
-	if basePath != "" {
-		assetBase = basePath
-		if !strings.HasSuffix(assetBase, "/") {
-			assetBase += "/"
-		}
-	}
-
-	// ロードマップ → グラフ のマップ (index ページのカード進捗に使う)
-	graphs := map[string]*graph.Graph{}
-	// ロードマップ → 最新更新日 (index ページのカードに使う)
-	latest := map[string]time.Time{}
-	// ロードマップ → 改版履歴のマップ (RSS に使う)
-	logs := map[string]*changelog.Log{}
-	now := time.Now()
-	// 下書きノード (ロードマップ ID → ノード ID 集合)。進捗の分母・ログ表示に使う
-	draftsByRoadmap := map[string]map[string]bool{}
+	res := newBuildResults()
 
 	// 各ロードマップを処理
 	for i := range cfg.Roadmaps {
-		rm := &cfg.Roadmaps[i]
-		fmt.Printf("  処理中: %s\n", rm.ID)
-
-		g, err := graph.Build(rm)
-		if err != nil {
-			return fmt.Errorf("ロードマップ %q のグラフ構築に失敗: %w", rm.ID, err)
-		}
-		graphs[rm.ID] = g
-
-		// 下書きノード。公開ビルドでは本文・履歴・編集パスを出力しない (locked)
-		drafts := resolveDrafts(g, docs)
-		draftsByRoadmap[rm.ID] = drafts
-		var locked map[string]bool
-		if !includeDrafts {
-			locked = drafts
-		}
-
-		// 改版履歴を集約 (公開ビルドでは下書きの frontmatter と changelog の下書き参照を除く)
-		log, err := changelog.Build(changelog.StripNodes(rm.Changelog, locked), resolveNodeDocs(g, docs, locked))
-		if err != nil {
-			return fmt.Errorf("ロードマップ %q の改版履歴の構築に失敗: %w", rm.ID, err)
-		}
-		latest[rm.ID] = log.Latest
-		logs[rm.ID] = log
-
-		// 最近更新されたノード (SVG 更新バッジ用)
-		recent := changelog.Recent(log.NodeUpdated, now, recentUpdateDays)
-		badges := make(map[string]time.Time, len(recent))
-		for id := range recent {
-			badges[id] = log.NodeUpdated[id]
-		}
-
-		lr, err := layout.Compute(g, cfg)
-		if err != nil {
-			return fmt.Errorf("ロードマップ %q のレイアウト計算に失敗: %w", rm.ID, err)
-		}
-
-		// ノード本文を Markdown → HTML / plaintext に変換
-		nodeHTML, nodeText, hasMermaid, err := buildNodeHTML(g, docs, assetBase, locked)
-		if err != nil {
+		if err := env.buildRoadmap(&cfg.Roadmaps[i], res); err != nil {
 			return err
-		}
-
-		editPaths := buildEditPaths(g, docs, repoPrefix, locked)
-
-		// ロードマップ用ディレクトリ
-		rmDir := filepath.Join(outDir, rm.ID)
-		if err := os.MkdirAll(rmDir, 0o755); err != nil {
-			return fmt.Errorf("ディレクトリ作成失敗: %w", err)
-		}
-
-		pageHTML, err := render.RenderRoadmapPage(
-			web.FS, cfg, rm, g, lr, nodeHTML, nodeText, basePath, assetBase, hasMermaid, log, badges,
-			editPaths,
-			render.Drafts{IDs: drafts, Preview: includeDrafts},
-		)
-		if err != nil {
-			return fmt.Errorf("ロードマップページの生成に失敗: %w", err)
-		}
-
-		if err := os.WriteFile(filepath.Join(rmDir, "index.html"), []byte(pageHTML), 0o644); err != nil {
-			return fmt.Errorf("index.html の書き込みに失敗: %w", err)
 		}
 	}
 
-	// index.html 生成
-	indexHTML, err := render.RenderIndexPage(web.FS, cfg, basePath, graphs, latest, lockedByRoadmap(draftsByRoadmap, includeDrafts))
+	if err := env.writeSiteFiles(res); err != nil {
+		return err
+	}
+
+	printDrafts(cfg, res.drafts, includeDrafts)
+
+	fmt.Printf("\n✓ %s に出力しました\n", outDir)
+	return nil
+}
+
+// loadBuildConfig は roadmap.yml を読み込んで検証する。noAnalytics が true なら site.analytics を無効化する。
+func loadBuildConfig(configPath string, noAnalytics bool) (*config.Config, error) {
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		return nil, err
+	}
+	if err := config.Validate(cfg); err != nil {
+		return nil, err
+	}
+	if noAnalytics {
+		cfg.Site.Analytics.Provider = ""
+	}
+	return cfg, nil
+}
+
+// prepareOutDir は出力ディレクトリを作成し、静的アセット (style.css / app.js) と
+// content/ 配下の非 .md ファイル (dist/content/ へ) をコピーする。
+func prepareOutDir(outDir, contentDir string, exclude []string) error {
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return fmt.Errorf("出力ディレクトリを作成できません: %w", err)
+	}
+	if err := copyStaticAssets(outDir); err != nil {
+		return err
+	}
+	assets, err := content.LoadAssets(contentDir, exclude)
+	if err != nil {
+		return err
+	}
+	return copyContentAssets(outDir, assets)
+}
+
+// resolveAssetBase は CSS/JS アセットの参照ベースを返す。
+// basePath が空のときはルートへの相対パス "../"、それ以外は末尾スラッシュ付きの basePath。
+func resolveAssetBase(basePath string) string {
+	if basePath == "" {
+		return "../"
+	}
+	if !strings.HasSuffix(basePath, "/") {
+		return basePath + "/"
+	}
+	return basePath
+}
+
+// buildEnv はビルド全体で共有する入力。
+type buildEnv struct {
+	cfg           *config.Config
+	docs          map[string]*content.Doc
+	outDir        string
+	basePath      string
+	assetBase     string
+	repoPrefix    string
+	includeDrafts bool
+	now           time.Time
+}
+
+// buildResults はロードマップごとの処理結果。index / RSS / 下書き表示に使う。
+type buildResults struct {
+	// graphs はロードマップ → グラフ (index ページのカード進捗に使う)
+	graphs map[string]*graph.Graph
+	// latest はロードマップ → 最新更新日 (index ページのカードに使う)
+	latest map[string]time.Time
+	// logs はロードマップ → 改版履歴 (RSS に使う)
+	logs map[string]*changelog.Log
+	// drafts は下書きノード (ロードマップ ID → ノード ID 集合)。進捗の分母・ログ表示に使う
+	drafts map[string]map[string]bool
+}
+
+func newBuildResults() *buildResults {
+	return &buildResults{
+		graphs: map[string]*graph.Graph{},
+		latest: map[string]time.Time{},
+		logs:   map[string]*changelog.Log{},
+		drafts: map[string]map[string]bool{},
+	}
+}
+
+// buildRoadmap は 1 つのロードマップのページを outDir/<id>/index.html に出力し、結果を res に記録する。
+func (env *buildEnv) buildRoadmap(rm *config.Roadmap, res *buildResults) error {
+	fmt.Printf("  処理中: %s\n", rm.ID)
+
+	g, err := graph.Build(rm)
+	if err != nil {
+		return fmt.Errorf("ロードマップ %q のグラフ構築に失敗: %w", rm.ID, err)
+	}
+	res.graphs[rm.ID] = g
+
+	// 下書きノード。公開ビルドでは本文・履歴・編集パスを出力しない (locked)
+	drafts := resolveDrafts(g, env.docs)
+	res.drafts[rm.ID] = drafts
+	var locked map[string]bool
+	if !env.includeDrafts {
+		locked = drafts
+	}
+
+	// 改版履歴を集約 (公開ビルドでは下書きの frontmatter と changelog の下書き参照を除く)
+	log, err := changelog.Build(changelog.StripNodes(rm.Changelog, locked), resolveNodeDocs(g, env.docs, locked))
+	if err != nil {
+		return fmt.Errorf("ロードマップ %q の改版履歴の構築に失敗: %w", rm.ID, err)
+	}
+	res.latest[rm.ID] = log.Latest
+	res.logs[rm.ID] = log
+
+	lr, err := layout.Compute(g, env.cfg)
+	if err != nil {
+		return fmt.Errorf("ロードマップ %q のレイアウト計算に失敗: %w", rm.ID, err)
+	}
+
+	// ノード本文を Markdown → HTML / plaintext に変換
+	nodeHTML, nodeText, hasMermaid, err := buildNodeHTML(g, env.docs, env.assetBase, locked)
+	if err != nil {
+		return err
+	}
+
+	editPaths := buildEditPaths(g, env.docs, env.repoPrefix, locked)
+
+	// ロードマップ用ディレクトリ
+	rmDir := filepath.Join(env.outDir, rm.ID)
+	if err := os.MkdirAll(rmDir, 0o755); err != nil {
+		return fmt.Errorf("ディレクトリ作成失敗: %w", err)
+	}
+
+	pageHTML, err := render.RenderRoadmapPage(
+		web.FS, env.cfg, rm, g, lr, nodeHTML, nodeText, env.basePath, env.assetBase, hasMermaid, log,
+		recentBadges(log, env.now),
+		editPaths,
+		render.Drafts{IDs: drafts, Preview: env.includeDrafts},
+	)
+	if err != nil {
+		return fmt.Errorf("ロードマップページの生成に失敗: %w", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(rmDir, "index.html"), []byte(pageHTML), 0o644); err != nil {
+		return fmt.Errorf("index.html の書き込みに失敗: %w", err)
+	}
+	return nil
+}
+
+// recentBadges は最近更新されたノード (SVG 更新バッジ用) → 最終更新日を返す。
+func recentBadges(log *changelog.Log, now time.Time) map[string]time.Time {
+	recent := changelog.Recent(log.NodeUpdated, now, recentUpdateDays)
+	badges := make(map[string]time.Time, len(recent))
+	for id := range recent {
+		badges[id] = log.NodeUpdated[id]
+	}
+	return badges
+}
+
+// writeSiteFiles はサイト全体のファイル (index.html / sitemap.xml / feed.rss) を出力する。
+func (env *buildEnv) writeSiteFiles(res *buildResults) error {
+	indexHTML, err := render.RenderIndexPage(web.FS, env.cfg, env.basePath, res.graphs, res.latest, lockedByRoadmap(res.drafts, env.includeDrafts))
 	if err != nil {
 		return fmt.Errorf("インデックスページの生成に失敗: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(outDir, "index.html"), []byte(indexHTML), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(env.outDir, "index.html"), []byte(indexHTML), 0o644); err != nil {
 		return fmt.Errorf("index.html の書き込みに失敗: %w", err)
 	}
 
-	// sitemap.xml 生成
-	if sitemapXML, err := meta.RenderSitemap(cfg); err != nil {
-		return fmt.Errorf("sitemap.xml の生成に失敗: %w", err)
-	} else if sitemapXML != "" {
-		if err := os.WriteFile(filepath.Join(outDir, "sitemap.xml"), []byte(sitemapXML), 0o644); err != nil {
-			return fmt.Errorf("sitemap.xml の書き込みに失敗: %w", err)
-		}
-		fmt.Println("  sitemap.xml を生成しました")
+	if err := writeOptionalFile(env.outDir, "sitemap.xml", func() (string, error) {
+		return meta.RenderSitemap(env.cfg)
+	}); err != nil {
+		return err
 	}
+	return writeOptionalFile(env.outDir, "feed.rss", func() (string, error) {
+		return meta.RenderRSS(env.cfg, res.graphs, res.logs)
+	})
+}
 
-	// feed.rss 生成
-	if rssXML, err := meta.RenderRSS(cfg, graphs, logs); err != nil {
-		return fmt.Errorf("feed.rss の生成に失敗: %w", err)
-	} else if rssXML != "" {
-		if err := os.WriteFile(filepath.Join(outDir, "feed.rss"), []byte(rssXML), 0o644); err != nil {
-			return fmt.Errorf("feed.rss の書き込みに失敗: %w", err)
-		}
-		fmt.Println("  feed.rss を生成しました")
+// writeOptionalFile は generate の結果を outDir/name に書き出す。結果が空 (siteUrl 未設定など) なら何もしない。
+func writeOptionalFile(outDir, name string, generate func() (string, error)) error {
+	data, err := generate()
+	if err != nil {
+		return fmt.Errorf("%s の生成に失敗: %w", name, err)
 	}
-
-	printDrafts(cfg, draftsByRoadmap, includeDrafts)
-
-	fmt.Printf("\n✓ %s に出力しました\n", outDir)
+	if data == "" {
+		return nil
+	}
+	if err := os.WriteFile(filepath.Join(outDir, name), []byte(data), 0o644); err != nil {
+		return fmt.Errorf("%s の書き込みに失敗: %w", name, err)
+	}
+	fmt.Printf("  %s を生成しました\n", name)
 	return nil
 }
 
@@ -243,69 +312,92 @@ func buildNodeHTML(g *graph.Graph, docs map[string]*content.Doc, assetBase strin
 		}
 		doc, ok := lookupDoc(docs, n.Node)
 		if !ok {
-			nodeHTML[n.ID] = ""
-			nodeText[n.ID] = ""
-			if n.Node.Content != "" {
-				unresolved = append(unresolved, fmt.Sprintf("%s (content: %q)", n.ID, n.Node.Content))
-			} else {
-				unresolved = append(unresolved, n.ID)
-			}
+			nodeHTML[n.ID], nodeText[n.ID] = "", ""
+			unresolved = append(unresolved, unresolvedLabel(n.Node))
 			continue
 		}
 
-		urlPrefix := assetBase + "content/"
-		if doc.RelDir != "" {
-			urlPrefix += doc.RelDir + "/"
-		}
-		html, err := render.RenderMarkdownWithBase(doc.Body, urlPrefix)
+		html, mermaid, err := renderNodeDoc(n.Node, doc, assetBase)
 		if err != nil {
 			return nil, nil, false, fmt.Errorf("ノード %q の Markdown 変換に失敗: %w", n.ID, err)
 		}
-
-		// links が content frontmatter にあれば config.Node の Links に追加 (content 優先)
-		if len(doc.Frontmatter.Links) > 0 {
-			links := make([]config.Link, len(doc.Frontmatter.Links))
-			for i, l := range doc.Frontmatter.Links {
-				links[i] = config.Link{Title: l.Title, URL: l.URL}
-			}
-			n.Node.Links = links
-		}
-
-		if render.HasMermaid(html) {
-			hasMermaid = true
-		}
-
-		// リンク集を本文の後ろに追記
-		if len(n.Node.Links) > 0 {
-			html += render.RenderLinks(n.Node.Links)
-		}
-
+		hasMermaid = hasMermaid || mermaid
 		nodeHTML[n.ID] = html
-
-		// 全文検索用 plaintext: 本文テキスト + リンクタイトル
-		plainBody := render.ExtractPlainText(doc.Body)
-		linkTitles := make([]string, 0, len(n.Node.Links))
-		for _, l := range n.Node.Links {
-			if l.Title != "" {
-				linkTitles = append(linkTitles, l.Title)
-			}
-		}
-		linkText := strings.Join(linkTitles, " ")
-		if linkText != "" {
-			nodeText[n.ID] = strings.TrimSpace(plainBody + " " + linkText)
-		} else {
-			nodeText[n.ID] = plainBody
-		}
+		nodeText[n.ID] = nodePlainText(doc.Body, n.Node.Links)
 	}
 
-	if len(unresolved) > 0 {
-		fmt.Fprintf(os.Stderr, "  warning: %d 個のノードに対応する content/*.md が見つかりません:\n", len(unresolved))
-		for _, id := range unresolved {
-			fmt.Fprintf(os.Stderr, "    - %s\n", id)
-		}
-	}
+	warnUnresolvedDocs(unresolved)
 
 	return nodeHTML, nodeText, hasMermaid, nil
+}
+
+// unresolvedLabel は記事が見つからないノードの警告表示用ラベルを返す。
+func unresolvedLabel(n *config.Node) string {
+	if n.Content != "" {
+		return fmt.Sprintf("%s (content: %q)", n.ID, n.Content)
+	}
+	return n.ID
+}
+
+// renderNodeDoc はノードの記事を HTML に変換し、mermaid を含むかを返す。
+// 記事 frontmatter に links があれば n.Links を置き換え (content 優先)、リンク集を本文の後ろに追記する。
+func renderNodeDoc(n *config.Node, doc *content.Doc, assetBase string) (string, bool, error) {
+	urlPrefix := assetBase + "content/"
+	if doc.RelDir != "" {
+		urlPrefix += doc.RelDir + "/"
+	}
+	html, err := render.RenderMarkdownWithBase(doc.Body, urlPrefix)
+	if err != nil {
+		return "", false, err
+	}
+
+	applyFrontmatterLinks(n, doc.Frontmatter.Links)
+	hasMermaid := render.HasMermaid(html)
+
+	// リンク集を本文の後ろに追記
+	if len(n.Links) > 0 {
+		html += render.RenderLinks(n.Links)
+	}
+	return html, hasMermaid, nil
+}
+
+// applyFrontmatterLinks は content frontmatter の links があれば config.Node の Links を置き換える (content 優先)。
+func applyFrontmatterLinks(n *config.Node, fmLinks []content.Link) {
+	if len(fmLinks) == 0 {
+		return
+	}
+	links := make([]config.Link, len(fmLinks))
+	for i, l := range fmLinks {
+		links[i] = config.Link{Title: l.Title, URL: l.URL}
+	}
+	n.Links = links
+}
+
+// nodePlainText は全文検索用 plaintext (本文テキスト + 空でないリンクタイトル) を返す。
+func nodePlainText(body string, links []config.Link) string {
+	plainBody := render.ExtractPlainText(body)
+	linkTitles := make([]string, 0, len(links))
+	for _, l := range links {
+		if l.Title != "" {
+			linkTitles = append(linkTitles, l.Title)
+		}
+	}
+	linkText := strings.Join(linkTitles, " ")
+	if linkText == "" {
+		return plainBody
+	}
+	return strings.TrimSpace(plainBody + " " + linkText)
+}
+
+// warnUnresolvedDocs は記事が見つからないノードを stderr に警告する。
+func warnUnresolvedDocs(unresolved []string) {
+	if len(unresolved) == 0 {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "  warning: %d 個のノードに対応する content/*.md が見つかりません:\n", len(unresolved))
+	for _, id := range unresolved {
+		fmt.Fprintf(os.Stderr, "    - %s\n", id)
+	}
 }
 
 // lookupDoc はノードに対応する content.Doc を 3 段階で探す:

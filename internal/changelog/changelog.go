@@ -136,61 +136,10 @@ func Build(entries []config.ChangelogEntry, nodeDocs map[string]*content.Doc) (*
 func Check(entries []config.ChangelogEntry, nodeDocs map[string]*content.Doc, now time.Time) []Warning {
 	y, m, d := now.Date()
 	today := time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
-	var ws []Warning
-	add := func(id, msg string) { ws = append(ws, Warning{NodeID: id, Message: msg}) }
 
-	for i, e := range entries {
-		ed, err := parseDate(e.Date)
-		if err != nil {
-			continue
-		}
-		if ed.After(today) {
-			add("", fmt.Sprintf("changelog[%d] の日付 %s が未来です", i, e.Date))
-		}
-		for _, id := range dedupe(e.Nodes) {
-			doc := nodeDocs[id]
-			if doc == nil || doc.Frontmatter.Updated == "" {
-				continue
-			}
-			ud, err := parseDate(doc.Frontmatter.Updated)
-			if err != nil {
-				continue
-			}
-			if ud.Before(ed) {
-				add(id, fmt.Sprintf("updated %s が roadmap.yml の changelog[%d] (%s) より古いです", doc.Frontmatter.Updated, i, e.Date))
-			}
-		}
-	}
-
+	ws := checkEntries(entries, nodeDocs, today)
 	for _, id := range sortedNodeIDs(nodeDocs) {
-		fm := nodeDocs[id].Frontmatter
-		var latestChange time.Time
-		var latestChangeStr string
-		for ci, c := range fm.Changes {
-			cd, err := parseDate(c.Date)
-			if err != nil {
-				continue
-			}
-			if cd.After(today) {
-				add(id, fmt.Sprintf("changes[%d] の日付 %s が未来です", ci, c.Date))
-			}
-			if cd.After(latestChange) {
-				latestChange, latestChangeStr = cd, c.Date
-			}
-		}
-		if fm.Updated == "" {
-			continue
-		}
-		ud, err := parseDate(fm.Updated)
-		if err != nil {
-			continue
-		}
-		if ud.After(today) {
-			add(id, fmt.Sprintf("updated %s が未来です", fm.Updated))
-		}
-		if !latestChange.IsZero() && ud.Before(latestChange) {
-			add(id, fmt.Sprintf("updated %s が changes の最新日 %s より古いです", fm.Updated, latestChangeStr))
-		}
+		ws = append(ws, checkNodeFrontmatter(id, nodeDocs[id].Frontmatter, today)...)
 	}
 
 	sort.SliceStable(ws, func(i, j int) bool {
@@ -200,6 +149,84 @@ func Check(entries []config.ChangelogEntry, nodeDocs map[string]*content.Doc, no
 		return ws[i].Message < ws[j].Message
 	})
 	return ws
+}
+
+// checkEntries は roadmap.yml の項目の未来日付と、関連ノードの updated が項目より古いことを検査する。
+func checkEntries(entries []config.ChangelogEntry, nodeDocs map[string]*content.Doc, today time.Time) []Warning {
+	var ws []Warning
+	for i, e := range entries {
+		ed, err := parseDate(e.Date)
+		if err != nil {
+			continue
+		}
+		if ed.After(today) {
+			ws = append(ws, Warning{Message: fmt.Sprintf("changelog[%d] の日付 %s が未来です", i, e.Date)})
+		}
+		ws = append(ws, checkEntryNodes(i, e, ed, nodeDocs)...)
+	}
+	return ws
+}
+
+// checkEntryNodes は roadmap.yml の項目 entries[i] (日付 ed) より updated が古い関連ノードを警告する。
+func checkEntryNodes(i int, e config.ChangelogEntry, ed time.Time, nodeDocs map[string]*content.Doc) []Warning {
+	var ws []Warning
+	for _, id := range dedupe(e.Nodes) {
+		ud, ok := docUpdated(nodeDocs[id])
+		if ok && ud.Before(ed) {
+			ws = append(ws, Warning{NodeID: id, Message: fmt.Sprintf(
+				"updated %s が roadmap.yml の changelog[%d] (%s) より古いです", nodeDocs[id].Frontmatter.Updated, i, e.Date)})
+		}
+	}
+	return ws
+}
+
+// docUpdated は doc の frontmatter updated を返す。doc がない・updated が空・パース不可なら false。
+func docUpdated(doc *content.Doc) (time.Time, bool) {
+	if doc == nil || doc.Frontmatter.Updated == "" {
+		return time.Time{}, false
+	}
+	ud, err := parseDate(doc.Frontmatter.Updated)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return ud, true
+}
+
+// checkNodeFrontmatter はノード frontmatter の changes / updated の未来日付と、
+// updated が changes の最新日より古いことを検査する。
+func checkNodeFrontmatter(id string, fm content.Frontmatter, today time.Time) []Warning {
+	ws, latestChange, latestChangeStr := checkChanges(id, fm.Changes, today)
+	if fm.Updated == "" {
+		return ws
+	}
+	ud, err := parseDate(fm.Updated)
+	if err != nil {
+		return ws
+	}
+	if ud.After(today) {
+		ws = append(ws, Warning{NodeID: id, Message: fmt.Sprintf("updated %s が未来です", fm.Updated)})
+	}
+	if !latestChange.IsZero() && ud.Before(latestChange) {
+		ws = append(ws, Warning{NodeID: id, Message: fmt.Sprintf("updated %s が changes の最新日 %s より古いです", fm.Updated, latestChangeStr)})
+	}
+	return ws
+}
+
+// checkChanges は changes の未来日付を警告し、パースできた changes の最新日 (とその元の文字列) を返す。
+func checkChanges(id string, changes []content.Change, today time.Time) (ws []Warning, latest time.Time, latestStr string) {
+	for ci, c := range changes {
+		cd, err := parseDate(c.Date)
+		if err != nil {
+			continue
+		}
+		if cd.After(today) {
+			ws = append(ws, Warning{NodeID: id, Message: fmt.Sprintf("changes[%d] の日付 %s が未来です", ci, c.Date)})
+		}
+		if cd.After(latest) {
+			latest, latestStr = cd, c.Date
+		}
+	}
+	return ws, latest, latestStr
 }
 
 // Recent は updated のうち now から days 日以内 (未来日付は除く) のノード ID の集合を返す。

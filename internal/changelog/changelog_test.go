@@ -254,3 +254,30 @@ func TestBuild_draftDocsExcluded(t *testing.T) {
 		t.Errorf("roadmap.yml 由来の項目は残るはず: %d", len(log.Items))
 	}
 }
+
+func TestCheckNodeFrontmatter(t *testing.T) {
+	today := day("2026-06-15")
+	change := func(date string) content.Change { return content.Change{Date: date, Summary: "c"} }
+	tests := []struct {
+		name string
+		fm   content.Frontmatter
+		want []Warning
+	}{
+		{"空", content.Frontmatter{}, nil},
+		{"updated のみ (過去)", content.Frontmatter{Updated: "2026-06-01"}, nil},
+		{"updated が当日は未来扱いしない", content.Frontmatter{Updated: "2026-06-15"}, nil},
+		{"updated 不正でも changes の未来日付は警告", content.Frontmatter{Updated: "bad", Changes: []content.Change{change("2026-07-01")}},
+			[]Warning{{"a", "changes[0] の日付 2026-07-01 が未来です"}}},
+		{"changes がすべて不正なら最新日比較をしない", content.Frontmatter{Updated: "2026-01-01", Changes: []content.Change{change("bad")}}, nil},
+		{"最新の changes と比較する", content.Frontmatter{Updated: "2026-03-01", Changes: []content.Change{change("2026-02-01"), change("2026-04-01"), change("2026-01-01")}},
+			[]Warning{{"a", "updated 2026-03-01 が changes の最新日 2026-04-01 より古いです"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := checkNodeFrontmatter("a", tt.fm, today)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got %+v\nwant %+v", got, tt.want)
+			}
+		})
+	}
+}
