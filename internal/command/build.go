@@ -312,69 +312,92 @@ func buildNodeHTML(g *graph.Graph, docs map[string]*content.Doc, assetBase strin
 		}
 		doc, ok := lookupDoc(docs, n.Node)
 		if !ok {
-			nodeHTML[n.ID] = ""
-			nodeText[n.ID] = ""
-			if n.Node.Content != "" {
-				unresolved = append(unresolved, fmt.Sprintf("%s (content: %q)", n.ID, n.Node.Content))
-			} else {
-				unresolved = append(unresolved, n.ID)
-			}
+			nodeHTML[n.ID], nodeText[n.ID] = "", ""
+			unresolved = append(unresolved, unresolvedLabel(n.Node))
 			continue
 		}
 
-		urlPrefix := assetBase + "content/"
-		if doc.RelDir != "" {
-			urlPrefix += doc.RelDir + "/"
-		}
-		html, err := render.RenderMarkdownWithBase(doc.Body, urlPrefix)
+		html, mermaid, err := renderNodeDoc(n.Node, doc, assetBase)
 		if err != nil {
 			return nil, nil, false, fmt.Errorf("ノード %q の Markdown 変換に失敗: %w", n.ID, err)
 		}
-
-		// links が content frontmatter にあれば config.Node の Links に追加 (content 優先)
-		if len(doc.Frontmatter.Links) > 0 {
-			links := make([]config.Link, len(doc.Frontmatter.Links))
-			for i, l := range doc.Frontmatter.Links {
-				links[i] = config.Link{Title: l.Title, URL: l.URL}
-			}
-			n.Node.Links = links
-		}
-
-		if render.HasMermaid(html) {
-			hasMermaid = true
-		}
-
-		// リンク集を本文の後ろに追記
-		if len(n.Node.Links) > 0 {
-			html += render.RenderLinks(n.Node.Links)
-		}
-
+		hasMermaid = hasMermaid || mermaid
 		nodeHTML[n.ID] = html
-
-		// 全文検索用 plaintext: 本文テキスト + リンクタイトル
-		plainBody := render.ExtractPlainText(doc.Body)
-		linkTitles := make([]string, 0, len(n.Node.Links))
-		for _, l := range n.Node.Links {
-			if l.Title != "" {
-				linkTitles = append(linkTitles, l.Title)
-			}
-		}
-		linkText := strings.Join(linkTitles, " ")
-		if linkText != "" {
-			nodeText[n.ID] = strings.TrimSpace(plainBody + " " + linkText)
-		} else {
-			nodeText[n.ID] = plainBody
-		}
+		nodeText[n.ID] = nodePlainText(doc.Body, n.Node.Links)
 	}
 
-	if len(unresolved) > 0 {
-		fmt.Fprintf(os.Stderr, "  warning: %d 個のノードに対応する content/*.md が見つかりません:\n", len(unresolved))
-		for _, id := range unresolved {
-			fmt.Fprintf(os.Stderr, "    - %s\n", id)
-		}
-	}
+	warnUnresolvedDocs(unresolved)
 
 	return nodeHTML, nodeText, hasMermaid, nil
+}
+
+// unresolvedLabel は記事が見つからないノードの警告表示用ラベルを返す。
+func unresolvedLabel(n *config.Node) string {
+	if n.Content != "" {
+		return fmt.Sprintf("%s (content: %q)", n.ID, n.Content)
+	}
+	return n.ID
+}
+
+// renderNodeDoc はノードの記事を HTML に変換し、mermaid を含むかを返す。
+// 記事 frontmatter に links があれば n.Links を置き換え (content 優先)、リンク集を本文の後ろに追記する。
+func renderNodeDoc(n *config.Node, doc *content.Doc, assetBase string) (string, bool, error) {
+	urlPrefix := assetBase + "content/"
+	if doc.RelDir != "" {
+		urlPrefix += doc.RelDir + "/"
+	}
+	html, err := render.RenderMarkdownWithBase(doc.Body, urlPrefix)
+	if err != nil {
+		return "", false, err
+	}
+
+	applyFrontmatterLinks(n, doc.Frontmatter.Links)
+	hasMermaid := render.HasMermaid(html)
+
+	// リンク集を本文の後ろに追記
+	if len(n.Links) > 0 {
+		html += render.RenderLinks(n.Links)
+	}
+	return html, hasMermaid, nil
+}
+
+// applyFrontmatterLinks は content frontmatter の links があれば config.Node の Links を置き換える (content 優先)。
+func applyFrontmatterLinks(n *config.Node, fmLinks []content.Link) {
+	if len(fmLinks) == 0 {
+		return
+	}
+	links := make([]config.Link, len(fmLinks))
+	for i, l := range fmLinks {
+		links[i] = config.Link{Title: l.Title, URL: l.URL}
+	}
+	n.Links = links
+}
+
+// nodePlainText は全文検索用 plaintext (本文テキスト + 空でないリンクタイトル) を返す。
+func nodePlainText(body string, links []config.Link) string {
+	plainBody := render.ExtractPlainText(body)
+	linkTitles := make([]string, 0, len(links))
+	for _, l := range links {
+		if l.Title != "" {
+			linkTitles = append(linkTitles, l.Title)
+		}
+	}
+	linkText := strings.Join(linkTitles, " ")
+	if linkText == "" {
+		return plainBody
+	}
+	return strings.TrimSpace(plainBody + " " + linkText)
+}
+
+// warnUnresolvedDocs は記事が見つからないノードを stderr に警告する。
+func warnUnresolvedDocs(unresolved []string) {
+	if len(unresolved) == 0 {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "  warning: %d 個のノードに対応する content/*.md が見つかりません:\n", len(unresolved))
+	for _, id := range unresolved {
+		fmt.Fprintf(os.Stderr, "    - %s\n", id)
+	}
 }
 
 // lookupDoc はノードに対応する content.Doc を 3 段階で探す:

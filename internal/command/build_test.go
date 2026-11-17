@@ -221,3 +221,122 @@ func TestWriteOptionalFile(t *testing.T) {
 		})
 	}
 }
+
+func TestUnresolvedLabel(t *testing.T) {
+	tests := []struct {
+		name string
+		node config.Node
+		want string
+	}{
+		{"content なし", config.Node{ID: "a"}, "a"},
+		{"content あり", config.Node{ID: "a", Content: "sub/page"}, `a (content: "sub/page")`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := unresolvedLabel(&tt.node); got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNodePlainText(t *testing.T) {
+	tests := []struct {
+		name  string
+		body  string
+		links []config.Link
+		want  string
+	}{
+		{"リンクなし", "本文", nil, "本文"},
+		{"タイトルありリンク", "本文", []config.Link{{Title: "MDN", URL: "u1"}, {Title: "Spec", URL: "u2"}}, "本文 MDN Spec"},
+		{"空タイトルは除く", "本文", []config.Link{{Title: "", URL: "u1"}, {Title: "MDN", URL: "u2"}}, "本文 MDN"},
+		{"全リンクが空タイトル", "本文", []config.Link{{URL: "u1"}}, "本文"},
+		{"本文が空", "", []config.Link{{Title: "MDN", URL: "u1"}}, "MDN"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := nodePlainText(tt.body, tt.links); got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestApplyFrontmatterLinks(t *testing.T) {
+	orig := []config.Link{{Title: "yml", URL: "https://yml.example"}}
+	tests := []struct {
+		name    string
+		fmLinks []content.Link
+		want    []config.Link
+	}{
+		{"frontmatter なしなら roadmap.yml のまま", nil, orig},
+		{"frontmatter が優先", []content.Link{{Title: "fm", URL: "https://fm.example"}},
+			[]config.Link{{Title: "fm", URL: "https://fm.example"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := &config.Node{ID: "a", Links: orig}
+			applyFrontmatterLinks(n, tt.fmLinks)
+			if len(n.Links) != len(tt.want) {
+				t.Fatalf("got %v, want %v", n.Links, tt.want)
+			}
+			for i := range tt.want {
+				if n.Links[i] != tt.want[i] {
+					t.Errorf("links[%d] = %v, want %v", i, n.Links[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestRenderNodeDoc(t *testing.T) {
+	tests := []struct {
+		name        string
+		node        config.Node
+		doc         content.Doc
+		wantMermaid bool
+		wantIn      []string
+		wantNotIn   []string
+	}{
+		{
+			name:   "相対画像はサブディレクトリ込みで書き換える",
+			node:   config.Node{ID: "a"},
+			doc:    content.Doc{RelDir: "sub", Body: "![x](img.png)"},
+			wantIn: []string{`src="../content/sub/img.png"`},
+		},
+		{
+			name:        "mermaid を検出する",
+			node:        config.Node{ID: "a"},
+			doc:         content.Doc{Body: "```mermaid\ngraph TD; A-->B;\n```\n"},
+			wantMermaid: true,
+		},
+		{
+			name:      "frontmatter のリンクを本文の後ろに追記する",
+			node:      config.Node{ID: "a", Links: []config.Link{{Title: "yml", URL: "https://yml.example"}}},
+			doc:       content.Doc{Body: "本文", Frontmatter: content.Frontmatter{Links: []content.Link{{Title: "fm", URL: "https://fm.example"}}}},
+			wantIn:    []string{"本文", "https://fm.example"},
+			wantNotIn: []string{"https://yml.example"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			html, mermaid, err := renderNodeDoc(&tt.node, &tt.doc, "../")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if mermaid != tt.wantMermaid {
+				t.Errorf("mermaid = %v, want %v", mermaid, tt.wantMermaid)
+			}
+			for _, s := range tt.wantIn {
+				if !strings.Contains(html, s) {
+					t.Errorf("html に %q がない: %s", s, html)
+				}
+			}
+			for _, s := range tt.wantNotIn {
+				if strings.Contains(html, s) {
+					t.Errorf("html に %q がある: %s", s, html)
+				}
+			}
+		})
+	}
+}
