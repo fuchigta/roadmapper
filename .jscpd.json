@@ -1,0 +1,11 @@
+{
+  "threshold": 0.8,
+  "ignore": [
+    "internal/layout/vendor/**",
+    "**/*_test.go",
+    "**/testdata/**",
+    ".claude/**",
+    "docs/**"
+  ],
+  "reporters": ["console"]
+}
