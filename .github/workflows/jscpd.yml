@@ -1,0 +1,48 @@
+name: jscpd
+
+# コピー＆ペーストによる重複が増えていないかを確かめる。jscpd は go.mod の依存に入れず
+# (外部ランタイム依存ゼロの原則はビルド成果物の話で、CI だけで使う)、npx の版指定で固定する。
+# 設定は .jscpd.json にあり、JSON にはコメントを書けないので設定の根拠はここに残す。
+#
+# - 版: jscpd 5.4.3 (Rust エンジン)。Go・JavaScript (web/static/app.js)・HTML テンプレート・
+#   CSS・YAML・Markdown を測る
+# - 検出の基準: 既定値 (min-tokens 50・min-lines 5・mode mild) で exact のみ。
+#   .gitignore は既定で除外される
+# - 実測 (2026-11-22): 118 ファイル・5 クローン、重複率は行 0.34%・トークン 0.52% (この jscpd.yml を含む)
+#   - 主なクローン: internal/render/markdown.go 内 (2 件・13 行)、web/static/app.js 内 (1 件・7 行)、
+#     web/static/style.css 内 (1 件・6 行)、web/templates/index.html と roadmap.html の <head> 冒頭 (1 件・7 行)
+# - threshold: 行の重複率と比べられ、超えたときだけ失敗する (0.35 では通り 0.34 では
+#   落ちることを確認済み。トークン 0.52% ではなく行 0.34% と比べられている)。実測に約 0.5 ポイントの余裕を
+#   持たせて 0.8 に置くラチェットとして扱い、重複を減らして実測が下がったら threshold も引き下げる
+# - ignore (除外しないと 196 ファイル・26 クローン・行 1.18%・トークン 1.17%):
+#   - internal/layout/vendor/**: 同梱のサードパーティ製 dagre.min.js (3809 行)。cccc.toml でも
+#     除外している。クローンは出ないが分母を膨らませて重複率を実際より低く見せるため外す
+#     (これだけ外すと 195 ファイル・26 クローン・行 1.46%)
+#   - **/*_test.go: テーブル駆動テストは性質上似た形が並び、ゲートで見たいのは本番コードの
+#     重複であるため外す。テストを含めると 143 ファイル・22 クローン・行 1.38% で、クローンの
+#     大半 (17 件) がテスト同士 (config/validate_test.go 内だけで 12 件) のため、本番コードの
+#     重複が増えても埋もれてしまう
+#   - **/testdata/**: ゴールデンファイル (SVG・HTML の期待出力) で生成物のため外す
+#     (svg_draft_locked.svg と svg_draft_preview.svg の 1 件・14 行が出る)
+#   - docs/**: roadmapper 自身の使い方ガイドで、README の説明の写しが Markdown のコードブロック
+#     として測定に入り、README・pages.yml との 3 件のクローンとして出るため外す
+#   - .claude/**: プロンプト・スキル類で製品コードではないため外す
+#   - 手元で測るときは --ignore を渡さず .jscpd.json を使う。CLI の --ignore は .jscpd.json の
+#     ignore に足されるのではなく置き換えるため、数値がずれる
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  jscpd:
+    name: jscpd
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: jscpd
+        run: npx --yes jscpd@5.4.3 --no-tips --no-colors .
