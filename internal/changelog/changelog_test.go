@@ -159,8 +159,8 @@ func TestRecent(t *testing.T) {
 	}
 	updated := map[string]time.Time{
 		"today":   d("2026-10-05"),
-		"edge":    d("2026-09-06"),
-		"old":     d("2026-09-05"),
+		"edge":    d("2026-09-05"),
+		"old":     d("2026-09-04"),
 		"future":  d("2026-10-06"),
 		"ancient": d("2025-01-01"),
 	}

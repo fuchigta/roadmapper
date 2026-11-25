@@ -229,19 +229,27 @@ func checkChanges(id string, changes []content.Change, today time.Time) (ws []Wa
 	return ws, latest, latestStr
 }
 
-// Recent は updated のうち now から days 日以内 (未来日付は除く) のノード ID の集合を返す。
+// Recent は updated のうち now の日付から days 日前まで (当日を含み、未来日付は除く) のノード ID の
+// 集合を返す。判定は暦日の差で行い、時刻は結果に影響しない。日付は Check と同じく各値が保持する
+// ロケーションで読む (now は呼び出し側のロケーション、updated は parseDate による UTC 0 時)。
 func Recent(updated map[string]time.Time, now time.Time, days int) map[string]bool {
 	out := map[string]bool{}
-	limit := time.Duration(days) * 24 * time.Hour
+	today := calendarDay(now)
+	oldest := today.AddDate(0, 0, -days)
 	for id, d := range updated {
-		if d.After(now) {
+		day := calendarDay(d)
+		if day.After(today) || day.Before(oldest) {
 			continue
 		}
-		if now.Sub(d) <= limit {
-			out[id] = true
-		}
+		out[id] = true
 	}
 	return out
+}
+
+// calendarDay は t の (t 自身のロケーションでの) 日付を UTC 0 時の time.Time にして返す。
+func calendarDay(t time.Time) time.Time {
+	y, m, d := t.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
 // StripNodes は entries の関連ノード ID から exclude に含まれるものを外した写しを返す。
