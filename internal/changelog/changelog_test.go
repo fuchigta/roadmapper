@@ -159,8 +159,8 @@ func TestRecent(t *testing.T) {
 	}
 	updated := map[string]time.Time{
 		"today":   d("2026-10-05"),
-		"edge":    d("2026-09-06"),
-		"old":     d("2026-09-05"),
+		"edge":    d("2026-09-05"),
+		"old":     d("2026-09-04"),
 		"future":  d("2026-10-06"),
 		"ancient": d("2025-01-01"),
 	}
@@ -174,27 +174,77 @@ func TestRecent(t *testing.T) {
 	}
 }
 
-// TestRecentBoundary は「days 日以内」の境界を固定する。ちょうど days 日前 (now との差が
-// days*24h ちょうど) は含み、それより 1ns でも古ければ含まない。
+// TestRecentBoundary は「days 日以内」を暦日の差で数えることを固定する。now の日付 (now 自身の
+// ロケーション) から数えてちょうど days 日前の日付は含み、days+1 日前は含まない。時刻は結果に
+// 影響しない。updated は parseDate と同じく日付文字列を UTC 0 時としてパースした値を使う。
 func TestRecentBoundary(t *testing.T) {
-	now := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)
-	tests := []struct {
+	jst := time.FixedZone("JST", 9*60*60)
+	est := time.FixedZone("EST", -5*60*60)
+	date := func(s string) time.Time {
+		v, err := parseDate(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	// now の日付はいずれも 2026-10-05 (now のロケーションで)。
+	nows := []struct {
+		name string
+		now  time.Time
+	}{
+		{"UTC 0時", time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)},
+		{"UTC 正午", time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)},
+		{"UTC 23:59:59.999999999", time.Date(2026, 10, 5, 23, 59, 59, 999999999, time.UTC)},
+		// UTC では 2026-10-04 20:00。旧仕様 (経過時間) では当日の updated が未来扱いで外れていた
+		{"JST 早朝", time.Date(2026, 10, 5, 5, 0, 0, 0, jst)},
+		{"JST 深夜", time.Date(2026, 10, 5, 23, 30, 0, 0, jst)},
+		// UTC では 2026-10-06 01:00。日付は UTC ではなく now のロケーションで読む
+		{"EST 夜", time.Date(2026, 10, 5, 20, 0, 0, 0, est)},
+	}
+	cases := []struct {
 		name    string
-		updated time.Time
+		updated string
 		want    bool
 	}{
-		{"ちょうど 30 日前は含む", time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC), true},
-		{"30 日前より 1ns 新しければ含む", time.Date(2026, 9, 5, 0, 0, 0, 1, time.UTC), true},
-		{"30 日前より 1ns 古ければ含まない", time.Date(2026, 9, 4, 23, 59, 59, 999999999, time.UTC), false},
-		{"now と同時刻は含む", now, true},
+		{"同日は含む", "2026-10-05", true},
+		{"ちょうど 30 日前は含む", "2026-09-05", true},
+		{"29 日前は含む", "2026-09-06", true},
+		{"31 日前は含まない", "2026-09-04", false},
+		{"翌日 (未来) は含まない", "2026-10-06", false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := Recent(map[string]time.Time{"n": tt.updated}, now, 30)
-			if got["n"] != tt.want {
-				t.Errorf("Recent(%v, now=%v, 30)[n] = %v, want %v", tt.updated, now, got["n"], tt.want)
-			}
-		})
+	for _, n := range nows {
+		for _, c := range cases {
+			t.Run(n.name+"/"+c.name, func(t *testing.T) {
+				got := Recent(map[string]time.Time{"n": date(c.updated)}, n.now, 30)
+				if got["n"] != c.want {
+					t.Errorf("Recent(%s, now=%v, 30)[n] = %v, want %v", c.updated, n.now, got["n"], c.want)
+				}
+			})
+		}
+	}
+}
+
+// TestRecentCalendarVsElapsed は旧仕様 (経過時間 days*24h) との違いを示す。日付差は 30 日だが
+// 経過時間では 30*24h を超える (now がその日の遅い時刻) 場合も含む。
+func TestRecentCalendarVsElapsed(t *testing.T) {
+	now := time.Date(2026, 10, 5, 23, 0, 0, 0, time.UTC)
+	updated := time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC)
+	if elapsed := now.Sub(updated); elapsed <= 30*24*time.Hour {
+		t.Fatalf("前提: 経過時間 %v が 30*24h を超えていること", elapsed)
+	}
+	if !Recent(map[string]time.Time{"n": updated}, now, 30)["n"] {
+		t.Error("日付差がちょうど 30 日なら経過時間によらず含むこと")
+	}
+}
+
+func TestRecentZeroDays(t *testing.T) {
+	now := time.Date(2026, 10, 5, 18, 0, 0, 0, time.UTC)
+	got := Recent(map[string]time.Time{
+		"today":     time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC),
+		"yesterday": time.Date(2026, 10, 4, 0, 0, 0, 0, time.UTC),
+	}, now, 0)
+	if want := map[string]bool{"today": true}; !reflect.DeepEqual(got, want) {
+		t.Errorf("days=0 は当日のみ: got %v, want %v", got, want)
 	}
 }
 

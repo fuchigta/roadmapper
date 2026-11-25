@@ -193,7 +193,7 @@ docs/                           # roadmapper 自身で作った使い方ガイ�
 
 ### 改版履歴 (changelog) / panel / contentAssets
 - 改版履歴は `roadmap.yml` の `roadmaps[].changelog` と content frontmatter の `updated` / `changes` を `changelog.Build` で集約する。日付は `YYYY-MM-DD`。形式不正は `config.Validate` / `changelog.Build` でエラー、整合性の問題 (未来日付・`updated` が履歴より古い等) は `changelog.Check` の警告 (`validate --strict` で失敗)
-- SVG の「更新」バッジは `changelog.Recent` で最終更新から 30 日以内のノード (`build.go` の `recentUpdateDays`)
+- SVG の「更新」バッジは `changelog.Recent` で最終更新から 30 日以内のノード (`build.go` の `recentUpdateDays`)。暦日の差で数え (ビルド日を含め 30 日前の日付まで含む)、時刻には依存しない。日付は `Check` と同じく `now` のロケーションでの日付と `updated` の日付文字列で比較する
 - `site.panel` (width / minWidth / maxWidth) の既定値補完は `applyDefaults`、整合性検証は `validatePanel`
 - `site.contentAssets.exclude` は `content.LoadAssets` で `content/` からの相対パスに glob 適用。`content/` の非 `.md` ファイルは `dist/content/` にコピーされ、Markdown 内の相対 URL は `RenderMarkdownWithBase` で書き換える
 
