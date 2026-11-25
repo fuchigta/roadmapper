@@ -37,6 +37,20 @@ spotter check --range origin/master..HEAD   # push 前の範囲を手元で検�
 
 [cccc](https://github.com/moznion/cccc) で関数ごとの認知的複雑度・循環的複雑度を検査する。CI は `.github/workflows/complexity.yml` (master への push と pull_request)、閾値と除外 (`internal/layout/vendor/**`) は `cccc.toml`、ローカルでは `cccc .` で実行する。閾値は導入時の最大値を基準にしたラチェットなので、超えたら閾値を上げずに関数を分割する。
 
+### ミューテーションテスト (`.github/scripts/mutation.sh`)
+
+[gremlins](https://github.com/go-gremlins/gremlins) (v0.6.0) で、変更した行のミュータントをテストが殺せるかを検査する。CI は `.github/workflows/mutation.yml` (master への push と pull_request)。全件ではなく基準 ref との差分 (変更行) だけを実行し、対象は `internal/changelog` と `internal/graph` に絞っている。
+
+```bash
+go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0   # CI 専用。go.mod には入れない
+.github/scripts/mutation.sh origin/master   # CI と同じ差分実行
+.github/scripts/mutation.sh --all           # 対象全体 (ベースライン計測用)
+```
+
+- ゲートは生き残り (LIVED + NOT COVERED) の上限 `MAX_SURVIVING_MUTANTS` のラチェット。超えたら上限を上げずにテストを足す。実測値と等価ミュータントの内訳はスクリプト冒頭のコメントにある
+- gremlins にはミュータント単位・行単位の除外が無い。等価ミュータントはファイル除外や変異種別の無効化で消さず、上限で吸収する
+- 対象パッケージを増やすときは `--all` でベースラインを測り直し、上限も見直す
+
 ## 必須コマンド
 
 ```bash
