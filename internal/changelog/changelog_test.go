@@ -174,6 +174,30 @@ func TestRecent(t *testing.T) {
 	}
 }
 
+// TestRecentBoundary は「days 日以内」の境界を固定する。ちょうど days 日前 (now との差が
+// days*24h ちょうど) は含み、それより 1ns でも古ければ含まない。
+func TestRecentBoundary(t *testing.T) {
+	now := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name    string
+		updated time.Time
+		want    bool
+	}{
+		{"ちょうど 30 日前は含む", time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC), true},
+		{"30 日前より 1ns 新しければ含む", time.Date(2026, 9, 5, 0, 0, 0, 1, time.UTC), true},
+		{"30 日前より 1ns 古ければ含まない", time.Date(2026, 9, 4, 23, 59, 59, 999999999, time.UTC), false},
+		{"now と同時刻は含む", now, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Recent(map[string]time.Time{"n": tt.updated}, now, 30)
+			if got["n"] != tt.want {
+				t.Errorf("Recent(%v, now=%v, 30)[n] = %v, want %v", tt.updated, now, got["n"], tt.want)
+			}
+		})
+	}
+}
+
 func TestStripNodes(t *testing.T) {
 	entries := []config.ChangelogEntry{
 		{Date: "2026-01-01", Summary: "a", Nodes: []string{"x", "d"}},
