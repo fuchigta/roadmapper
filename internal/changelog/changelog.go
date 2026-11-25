@@ -237,7 +237,7 @@ func Recent(updated map[string]time.Time, now time.Time, days int) map[string]bo
 		if d.After(now) {
 			continue
 		}
-		if age := now.Sub(d); age <= limit {
+		if now.Sub(d) <= limit {
 			out[id] = true
 		}
 	}
