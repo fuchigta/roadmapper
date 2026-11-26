@@ -33,17 +33,18 @@ TARGETS=(internal/changelog internal/graph)
 
 # ---- ゲート ----
 # 生き残り = LIVED + NOT COVERED (どちらもテストで検出されないミュータント)。
-# ベースライン (2026-11-25, gremlins v0.6.0, Go 1.25.6, --all で対象全体):
-#   internal/changelog: KILLED 24 / LIVED 2 / NOT COVERED 0 (efficacy 92.31%)
+# ベースライン (2026-11-26, gremlins v0.6.0, Go 1.25.6, --all で対象全体):
+#   internal/changelog: KILLED 22 / LIVED 2 / NOT COVERED 0 (efficacy 91.67%)
 #   internal/graph:     KILLED 8  / LIVED 0 / NOT COVERED 0 (efficacy 100%)
-#   合計 KILLED 32 / 生き残り 2 / TIMED OUT 0 (efficacy 94.12%)、ミューテーション実行 約 25 秒・
+#   合計 KILLED 30 / 生き残り 2 / TIMED OUT 0 (efficacy 93.75%)、ミューテーション実行 約 25 秒・
 #   カバレッジ計測込みで約 35 秒
 # 生き残り 2 件はどちらも等価ミュータント: changelog.go の Check 末尾のソート比較
 #   `ws[i].NodeID < ws[j].NodeID` と `ws[i].Message < ws[j].Message` の `<` → `<=`
 #   (CONDITIONALS_BOUNDARY)。前者は `!=` の分岐内で等号が成り立たず、後者は NodeID・Message が
 #   等しい Warning は区別できないため出力が変わらない
-# 以前はテストの穴だった Recent の `now.Sub(d) <= limit` の `<=` → `<` は、TestRecentBoundary
-# (ちょうど days 日前を含む境界のケース) で KILLED になった (生き残り 3 → 2)。
+# Recent は PR #12 で暦日判定に変わり、旧実装の `now.Sub(d) <= limit` のミュータントは
+# 消滅した (After/Before のメソッド呼び出しは gremlins の変異対象外)。その境界は
+# TestRecentBoundary がテストで固定している
 # gremlins にはミュータント単位・行単位の除外が無く (除外はファイル単位の --exclude-files と
 # 変異種別単位のフラグのみで、どちらも検出力を落とす)、等価ミュータントは除外せず上限で吸収する。
 # 差分実行でも最悪 (対象全体に差分がある) の値は実測の 2。新しい等価ミュータント 1 件ぶんの余裕を
